@@ -1,27 +1,33 @@
 --[[
-    PingoUI v2.0  |  Orchard-style UI Library
-    -----------------------------------------------------------
-    local Window = PingoUI.CreateWindow("Pingo", "Beta", {Icon = nil, Key = Enum.KeyCode.RightShift})
+    PingoUI v3.0  |  Orchard-style UI Library
+    ---------------------------------------------------------------
+    local Window = PingoUI.CreateWindow("Pingo", "Beta", {Update = "ThePerfect", Key = Enum.KeyCode.RightShift})
 
-    local Side = Window:CreateSideTab("Combat", "rbxassetid://...")   -- SideTab (الخانة الأساسية)
-    local Tab  = Side:CreateTab("All")                               -- Tab (خانة داخل الـ SideTab)
+    local Side = Window:CreateSideTab("Emotes", "rbxassetid://...")  -- SideTab (icon optional)
+    local Tab  = Side:CreateTab("All")                              -- Tab
 
     Tab:AddButton("Name", function() end)
     Tab:AddToggle("Name", false, function(state) end)
     Tab:AddSlider("Name", min, max, default, function(v) end, increment)
-    Tab:AddTextbox("Name", "placeholder", function(text, enterPressed) end, "default")
+    Tab:AddTextbox("Name", "placeholder", function(text, enter) end, "default")
+    Tab:AddStepper("Name", min, max, default, step, function(v) end)
+    Tab:AddLabel("Name", "Value")
 
     Window:Notify("Title", "Text", 3)
-    Window:Toggle()      -- فتح / إغلاق
-    Window:Destroy()
-    خانة Themes موجودة تلقائياً بأسفل الـ Sidebar
+    Window:Toggle() / Window:SetSizeMultiplier(1.2) / Window:Destroy()
+
+    "Menu Settings" SideTab (Theme + UI) موجودة تلقائياً بأسفل القائمة
 ]]
 
-local PingoUI = {Version = "2.0"}
+local PingoUI = {Version = "3.0"}
 
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+
+local Q = Enum.EasingStyle.Quint
+local BACK = Enum.EasingStyle.Back
+local GAP = 4
 
 -- ============================================================
 --  HELPERS
@@ -65,29 +71,44 @@ local BASE = {
 }
 
 local THEME_LIST = {
-	{"Ruby", "Red", rgb(255, 59, 83), rgb(255, 110, 80)},
-	{"Magenta", "Red", rgb(255, 70, 180), rgb(255, 95, 110)},
-	{"Tangerine", "Yellow", rgb(255, 130, 37), rgb(255, 190, 60)},
-	{"Sun", "Yellow", rgb(240, 225, 50), rgb(190, 255, 70)},
-	{"Sunset", "Yellow", rgb(255, 115, 90), rgb(255, 160, 20)},
-	{"Lime", "Green", rgb(110, 255, 70), rgb(50, 230, 140)},
-	{"Emerald", "Green", rgb(46, 220, 130), rgb(30, 200, 200)},
-	{"Aurora", "Green", rgb(110, 255, 190), rgb(150, 110, 255)},
-	{"Cyan", "Blue", rgb(40, 230, 255), rgb(60, 150, 255)},
-	{"Azure", "Blue", rgb(60, 130, 255), rgb(90, 210, 255)},
-	{"Ocean", "Blue", rgb(0, 190, 210), rgb(40, 110, 255)},
-	{"Neon", "Blue", rgb(0, 235, 255), rgb(220, 70, 220)},
-	{"Violet", "Purple", rgb(190, 80, 255), rgb(255, 90, 200)},
-	{"Orchid", "Purple", rgb(165, 130, 230), rgb(120, 140, 255)},
-	{"Gurple", "Purple", rgb(140, 60, 235), rgb(60, 120, 255)},
-	{"Grape", "Purple", rgb(160, 90, 255), rgb(225, 90, 255)},
-	{"Mono", "Mono", rgb(200, 200, 205), rgb(120, 122, 130)},
+	{"Ruby", rgb(255, 59, 83), rgb(255, 110, 80)},
+	{"Crimson", rgb(220, 40, 60), rgb(255, 70, 110)},
+	{"Rose", rgb(255, 100, 140), rgb(255, 150, 170)},
+	{"Magenta", rgb(255, 70, 180), rgb(255, 95, 110)},
+	{"Coral", rgb(255, 110, 100), rgb(255, 160, 120)},
+	{"Tangerine", rgb(255, 130, 37), rgb(255, 190, 60)},
+	{"Amber", rgb(255, 176, 0), rgb(255, 215, 80)},
+	{"Gold", rgb(255, 200, 40), rgb(255, 235, 120)},
+	{"Sun", rgb(240, 225, 50), rgb(190, 255, 70)},
+	{"Lemon", rgb(235, 255, 90), rgb(160, 255, 130)},
+	{"Lime", rgb(110, 255, 70), rgb(50, 230, 140)},
+	{"Mint", rgb(120, 255, 190), rgb(90, 230, 230)},
+	{"Emerald", rgb(46, 220, 130), rgb(30, 200, 200)},
+	{"Forest", rgb(60, 180, 90), rgb(140, 220, 90)},
+	{"Teal", rgb(20, 200, 180), rgb(40, 150, 230)},
+	{"Aurora", rgb(110, 255, 190), rgb(150, 110, 255)},
+	{"Cyan", rgb(40, 230, 255), rgb(60, 150, 255)},
+	{"Sky", rgb(120, 200, 255), rgb(170, 150, 255)},
+	{"Azure", rgb(60, 130, 255), rgb(90, 210, 255)},
+	{"Ocean", rgb(0, 190, 210), rgb(40, 110, 255)},
+	{"Sapphire", rgb(40, 90, 255), rgb(100, 60, 230)},
+	{"Indigo", rgb(90, 80, 255), rgb(160, 90, 255)},
+	{"Violet", rgb(190, 80, 255), rgb(255, 90, 200)},
+	{"Orchid", rgb(165, 130, 230), rgb(120, 140, 255)},
+	{"Gurple", rgb(140, 60, 235), rgb(60, 120, 255)},
+	{"Grape", rgb(160, 90, 255), rgb(225, 90, 255)},
+	{"Lavender", rgb(190, 160, 255), rgb(255, 170, 220)},
+	{"Neon", rgb(0, 235, 255), rgb(220, 70, 220)},
+	{"Sunset", rgb(255, 115, 90), rgb(255, 160, 20)},
+	{"Candy", rgb(255, 120, 200), rgb(120, 200, 255)},
+	{"Ice", rgb(200, 240, 255), rgb(130, 190, 255)},
+	{"Mono", rgb(200, 200, 205), rgb(120, 122, 130)},
 }
-local THEME_GROUPS = {"All", "Red", "Yellow", "Green", "Blue", "Purple", "Mono"}
 
+local BLACK = Color3.new(0, 0, 0)
 local THEMES = {}
 for _, t in ipairs(THEME_LIST) do
-	local d = {Group = t[2], Accent = t[3], Accent2 = t[4]}
+	local d = {Accent = t[2], Accent2 = t[3], AccentDark = t[2]:Lerp(BLACK, 0.35), Accent2Dark = t[3]:Lerp(BLACK, 0.35)}
 	for k, v in pairs(BASE) do d[k] = v end
 	THEMES[t[1]] = d
 end
@@ -103,12 +124,23 @@ local function bind(obj, prop, key, animate)
 	local b = bindings[obj]
 	if not b then b = {}; bindings[obj] = b end
 	b[prop] = key
-	if animate then tw(obj, 0.2, {[prop] = T(key)}) else obj[prop] = T(key) end
+	if animate then tw(obj, 0.25, {[prop] = T(key)}) else obj[prop] = T(key) end
 end
 
-local function grad(g)
-	gradients[g] = true
-	g.Color = ColorSequence.new(T("Accent"), T("Accent2"))
+local function seq(keys)
+	local pts, n = {}, #keys
+	for i, k in ipairs(keys) do
+		pts[i] = ColorSequenceKeypoint.new((i - 1) / (n - 1), T(k))
+	end
+	return ColorSequence.new(pts)
+end
+
+local function grad(keys, parent, props)
+	local g = new("UIGradient", props or {})
+	g.Parent = parent
+	gradients[g] = keys
+	g.Color = seq(keys)
+	return g
 end
 
 function PingoUI.SetTheme(name)
@@ -116,11 +148,11 @@ function PingoUI.SetTheme(name)
 	currentTheme = name
 	for obj, b in pairs(bindings) do
 		if obj.Parent then
-			for prop, key in pairs(b) do tw(obj, 0.3, {[prop] = T(key)}) end
+			for prop, key in pairs(b) do tw(obj, 0.35, {[prop] = T(key)}) end
 		end
 	end
-	for g in pairs(gradients) do
-		if g.Parent then g.Color = ColorSequence.new(T("Accent"), T("Accent2")) end
+	for g, keys in pairs(gradients) do
+		if g.Parent then g.Color = seq(keys) end
 	end
 	for _, fn in pairs(ringRefreshers) do fn() end
 end
@@ -150,8 +182,9 @@ function PingoUI.CreateWindow(title, version, config)
 	config = config or {}
 	title = title or "Pingo"
 	version = version or "Beta"
+	local updateName = config.Update or "ThePerfect"
 	local W, H = config.Width or 660, config.Height or 420
-	local win = {SideTabs = {}, Elements = {}, Conns = {}, Counter = 0, Opened = false, SearchText = ""}
+	local win = {SideTabs = {}, Elements = {}, Conns = {}, Counter = 0, Opened = false, SearchText = "", SizeMul = 1}
 
 	local function A(signal, fn)
 		local c = signal:Connect(fn)
@@ -171,11 +204,14 @@ function PingoUI.CreateWindow(title, version, config)
 		if ok and gui.Parent == p then break end
 	end
 
-	-- ---------- Draggable ----------
+	local function isPress(i)
+		return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch
+	end
+
 	local function makeDraggable(handle, target, onTap)
 		local dragging, moved, startMouse, startPos = false, false, nil, nil
 		handle.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if isPress(input) then
 				dragging, moved = true, false
 				startMouse, startPos = input.Position, target.Position
 				input.Changed:Connect(function()
@@ -200,19 +236,34 @@ function PingoUI.CreateWindow(title, version, config)
 	-- ---------- Holder / Main ----------
 	local Holder = new("Frame", {Name = "Holder", Size = UDim2.fromOffset(W, H), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui})
 	local fitScale = new("UIScale", {Parent = Holder})
-	local function refit()
+	local function targetScale()
 		local cam = workspace.CurrentCamera
 		local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
-		fitScale.Scale = math.clamp(math.min((vp.X - 20) / W, (vp.Y - 20) / H), 0.45, 1)
+		local fit = math.clamp(math.min((vp.X - 20) / W, (vp.Y - 20) / H), 0.4, 1)
+		return math.clamp(fit * win.SizeMul, 0.3, 1.8)
 	end
-	refit()
-	if workspace.CurrentCamera then A(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"), refit) end
+	local function refit(animate)
+		if animate then tw(fitScale, 0.4, {Scale = targetScale()}, BACK) else fitScale.Scale = targetScale() end
+	end
+	refit(false)
+	if workspace.CurrentCamera then
+		A(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"), function() refit(false) end)
+	end
 
 	local Main = new("CanvasGroup", {Name = "Main", Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BorderSizePixel = 0, GroupTransparency = 1, Parent = Holder}, {corner(12)})
 	bind(Main, "BackgroundColor3", "Background")
-	local openScale = new("UIScale", {Scale = 0.9, Parent = Main})
+	local openScale = new("UIScale", {Scale = 0.88, Parent = Main})
 	local mainStroke = new("UIStroke", {Thickness = 1.5, Parent = Main})
 	bind(mainStroke, "Color", "Stroke")
+
+	-- floating glow orbs
+	local function aura(x, y, size, dx, dy, dur)
+		local a = new("Frame", {Size = UDim2.fromOffset(size, size), Position = UDim2.fromScale(x, y), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 0.93, BorderSizePixel = 0, Parent = Main}, {corner(size / 2)})
+		bind(a, "BackgroundColor3", "Accent")
+		TweenService:Create(a, TweenInfo.new(dur, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.fromScale(x + dx, y + dy)}):Play()
+	end
+	aura(0.75, 0.3, 300, 0.12, 0.2, 7)
+	aura(0.55, 0.85, 240, -0.15, -0.15, 9)
 
 	-- ---------- Sidebar ----------
 	local Sidebar = new("Frame", {Name = "Sidebar", Size = UDim2.new(0, 170, 1, 0), BorderSizePixel = 0, Parent = Main})
@@ -226,21 +277,52 @@ function PingoUI.CreateWindow(title, version, config)
 	local titleRow = new("Frame", {Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 30), BackgroundTransparency = 1, Parent = Sidebar}, {
 		new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
-	local titleLbl = mkText("TextLabel", {Text = title, Font = Enum.Font.GothamBold, TextSize = 24, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 30), LayoutOrder = 1, Parent = titleRow}, "Accent")
+	local titleLbl = mkText("TextLabel", {Text = title, Font = Enum.Font.GothamBold, TextSize = 24, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 30), LayoutOrder = 1, Parent = titleRow}, "White")
+	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
+	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 	mkText("TextLabel", {Text = version, Font = Enum.Font.Gotham, TextSize = 11, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 20), LayoutOrder = 2, Parent = titleRow}, "SubText")
 
-	local SideList = new("ScrollingFrame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -124), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = Sidebar}, {
-		new("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
-		new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 2)}),
-	})
-	local BottomHolder = new("Frame", {Position = UDim2.new(0, 0, 1, -58), Size = UDim2.new(1, -1, 0, 58), BackgroundTransparency = 1, Parent = Sidebar}, {
-		new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10)}),
-	})
+	-- Nav: deterministic layout (so the sliding pill always lands exactly)
+	local navH = H - 62
+	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
+	local Pill = new("Frame", {Name = "Pill", Position = UDim2.fromOffset(10, 2), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Visible = false, Parent = Nav}, {corner(9)})
+	grad({"AccentDark", "Accent2Dark"}, Pill)
+	local pillStroke = new("UIStroke", {Thickness = 1, Transparency = 0.5, Parent = Pill})
+	bind(pillStroke, "Color", "Accent")
+
+	local pillY, pillToken = nil, 0
+	local function movePill(y)
+		if not pillY then
+			Pill.Position = UDim2.fromOffset(10, y)
+			Pill.Visible = true
+			pillY = y
+			return
+		end
+		if pillY == y then return end
+		pillToken = pillToken + 1
+		local my = pillToken
+		local from = pillY
+		pillY = y
+		local top, span = math.min(from, y), math.abs(y - from) + 38
+		tw(Pill, 0.16, {Position = UDim2.fromOffset(10, top), Size = UDim2.new(1, -20, 0, span)}, Enum.EasingStyle.Quad)
+		task.delay(0.12, function()
+			if pillToken ~= my then return end
+			tw(Pill, 0.38, {Position = UDim2.fromOffset(10, y), Size = UDim2.new(1, -20, 0, 38)}, Q)
+		end)
+		task.delay(0.55, function()
+			if pillToken == my then Pill.Position = UDim2.fromOffset(10, y); Pill.Size = UDim2.new(1, -20, 0, 38) end
+		end)
+	end
 
 	-- ---------- Content ----------
 	local Content = new("Frame", {Name = "Content", Position = UDim2.fromOffset(170, 0), Size = UDim2.new(1, -170, 1, 0), BackgroundTransparency = 1, Parent = Main})
 	local dragTop = new("Frame", {Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, Active = true, Parent = Content})
 	makeDraggable(dragTop, Holder)
+
+	-- animated top line
+	local topLine = new("Frame", {Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 50, Parent = Main})
+	local lg = grad({"Accent", "Accent2", "Accent"}, topLine, {Offset = Vector2.new(-1, 0)})
+	TweenService:Create(lg, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false), {Offset = Vector2.new(1, 0)}):Play()
 
 	-- Search
 	local SearchBar = new("Frame", {Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -78, 0, 38), BorderSizePixel = 0, Parent = Content}, {corner(8)})
@@ -251,15 +333,17 @@ function PingoUI.CreateWindow(title, version, config)
 	bind(searchIcon, "ImageColor3", "SubText")
 	local SearchBox = mkText("TextBox", {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0), Text = "", PlaceholderText = "Search", Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = SearchBar}, "Text")
 	bind(SearchBox, "PlaceholderColor3", "SubText")
-	SearchBox.Focused:Connect(function() bind(searchStroke, "Color", "Accent", true) end)
-	SearchBox.FocusLost:Connect(function() bind(searchStroke, "Color", "Stroke", true) end)
+	SearchBox.Focused:Connect(function() bind(searchStroke, "Color", "Accent", true); tw(searchIcon, 0.2, {Size = UDim2.fromOffset(21, 21)}, BACK) end)
+	SearchBox.FocusLost:Connect(function() bind(searchStroke, "Color", "Stroke", true); tw(searchIcon, 0.2, {Size = UDim2.fromOffset(18, 18)}) end)
 
-	-- Close
 	local CloseBtn = mkText("TextButton", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 14), Size = UDim2.fromOffset(46, 38), Text = "×", Font = Enum.Font.GothamBold, TextSize = 24, AutoButtonColor = false, BorderSizePixel = 0, BackgroundTransparency = 0, Parent = Content}, "Text")
 	corner(8).Parent = CloseBtn
 	bind(CloseBtn, "BackgroundColor3", "Card")
-	CloseBtn.MouseEnter:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("Accent")}) end)
-	CloseBtn.MouseLeave:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("Card")}) end)
+	local closeScale = new("UIScale", {Parent = CloseBtn})
+	CloseBtn.MouseEnter:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("AccentDark")}); tw(CloseBtn, 0.3, {Rotation = 90}, BACK) end)
+	CloseBtn.MouseLeave:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("Card")}); tw(CloseBtn, 0.3, {Rotation = 0}, BACK) end)
+	CloseBtn.MouseButton1Down:Connect(function() tw(closeScale, 0.1, {Scale = 0.88}) end)
+	CloseBtn.MouseButton1Up:Connect(function() tw(closeScale, 0.2, {Scale = 1}, BACK) end)
 
 	local TabBarHolder = new("Frame", {Position = UDim2.fromOffset(16, 60), Size = UDim2.new(1, -32, 0, 36), BackgroundTransparency = 1, Parent = Content})
 	local PagesHolder = new("Frame", {Position = UDim2.fromOffset(16, 106), Size = UDim2.new(1, -32, 1, -118), BackgroundTransparency = 1, ClipsDescendants = true, Parent = Content})
@@ -270,17 +354,20 @@ function PingoUI.CreateWindow(title, version, config)
 	})
 	bind(SearchPage, "ScrollBarImageColor3", "SubText")
 
-	-- ---------- Core selection logic ----------
+	-- ---------- Selection logic ----------
 	local selectTab, selectSideTab
 
 	local function playIn(tab)
 		for i, card in ipairs(tab.Cards) do
 			if i > 24 then break end
 			local s = card:FindFirstChild("Scale")
+			local shine = card:FindFirstChild("Shine")
 			if s then
-				s.Scale = 0.9
-				task.delay((i - 1) * 0.02, function()
-					if s.Parent then tw(s, 0.28, {Scale = 1}, Enum.EasingStyle.Back) end
+				s.Scale = 0.86
+				if shine then shine.BackgroundTransparency = 0.8 end
+				task.delay((i - 1) * 0.025, function()
+					if s.Parent then tw(s, 0.45, {Scale = 1}, BACK) end
+					if shine and shine.Parent then tw(shine, 0.5, {BackgroundTransparency = 1}) end
 				end)
 			end
 		end
@@ -292,35 +379,86 @@ function PingoUI.CreateWindow(title, version, config)
 		end
 	end
 
+	-- tab pill geometry (scale + offset, always exact)
+	local function tabSpan(n, a, b)
+		local lo, hi = math.min(a, b), math.max(a, b)
+		local ls, lo_o = (lo - 1) / n, (lo - 1) * GAP / n
+		local rs = (hi - 1) / n + 1 / n
+		local ro = (hi - 1) * GAP / n - GAP * (n - 1) / n
+		return UDim2.new(ls, lo_o, 0, 0), UDim2.new(rs - ls, ro - lo_o, 1, 0)
+	end
+
+	local function moveTabPill(st, idx, instant)
+		local n = #st.Tabs
+		if n == 0 then return end
+		if instant or not st.IndIdx then
+			local p, s = tabSpan(n, idx, idx)
+			st.TabInd.Position, st.TabInd.Size = p, s
+			st.TabInd.Visible = true
+			st.IndIdx = idx
+			return
+		end
+		if st.IndIdx == idx then return end
+		st.IndToken = (st.IndToken or 0) + 1
+		local my = st.IndToken
+		local p1, s1 = tabSpan(n, st.IndIdx, idx)
+		local p2, s2 = tabSpan(n, idx, idx)
+		st.IndIdx = idx
+		tw(st.TabInd, 0.15, {Position = p1, Size = s1}, Enum.EasingStyle.Quad)
+		task.delay(0.11, function()
+			if st.IndToken ~= my then return end
+			tw(st.TabInd, 0.4, {Position = p2, Size = s2}, Q)
+		end)
+		task.delay(0.55, function()
+			if st.IndToken == my then st.TabInd.Position, st.TabInd.Size = p2, s2 end
+		end)
+	end
+
 	selectTab = function(tab)
 		if win.SearchText ~= "" then SearchBox.Text = "" end
 		local st = tab.SideTab
+		local prev = win.CurrentTab
+		local dir = 1
+		if prev then
+			if prev.SideTab == st then dir = (tab.Index >= prev.Index) and 1 or -1
+			else dir = (st.Order >= prev.SideTab.Order) and 1 or -1 end
+		end
 		for _, o in ipairs(win.SideTabs) do
 			for _, t in ipairs(o.Tabs) do
 				t.Page.Visible = false
-				tw(t.Button, 0.2, {BackgroundTransparency = 1})
-				bind(t.Button, "TextColor3", "SubText", true)
+				bind(t.Button, "TextColor3", (t == tab) and "White" or "SubText", true)
 			end
 		end
 		st.ActiveTab = tab
 		win.ActiveSideTab = st
+		win.CurrentTab = tab
+		moveTabPill(st, tab.Index, false)
+		tab.Page.Position = UDim2.fromOffset(dir * 44, 0)
 		tab.Page.Visible = true
-		tw(tab.Button, 0.2, {BackgroundTransparency = 0})
-		bind(tab.Button, "TextColor3", "Accent", true)
+		tw(tab.Page, 0.45, {Position = UDim2.fromOffset(0, 0)}, Q)
 		playIn(tab)
 	end
 
 	selectSideTab = function(st)
 		if win.SearchText ~= "" then SearchBox.Text = "" end
+		local was = win.ActiveSideTab
 		for _, o in ipairs(win.SideTabs) do
 			local active = (o == st)
 			o.Active = active
-			tw(o.Button, 0.2, {BackgroundTransparency = active and 0 or 1})
 			bind(o.Label, "TextColor3", active and "White" or "Text", true)
-			if o.Icon then bind(o.Icon, "ImageColor3", active and "White" or "Text", true) end
+			tw(o.Label, 0.3, {Position = UDim2.new(0, o.Pad + (active and 5 or 0), 0, 0)}, Q)
+			if o.Icon then
+				bind(o.Icon, "ImageColor3", active and "White" or "Text", true)
+				if active then o.Icon.Rotation = -25; tw(o.Icon, 0.5, {Rotation = 0}, BACK) end
+			end
 			o.TabBar.Visible = active and #o.Tabs > 0
 		end
 		win.ActiveSideTab = st
+		movePill(st.Y)
+		if was ~= st then
+			st.TabBar.Position = UDim2.fromOffset(0, -12)
+			tw(st.TabBar, 0.45, {Position = UDim2.fromOffset(0, 0)}, Q)
+		end
 		local t = st.ActiveTab or st.Tabs[1]
 		if t then selectTab(t) else hideAllPages() end
 	end
@@ -358,10 +496,11 @@ function PingoUI.CreateWindow(title, version, config)
 		local card = new("Frame", {Name = name, BorderSizePixel = 0, LayoutOrder = win.Counter})
 		bind(card, "BackgroundColor3", "Card")
 		corner(8).Parent = card
-		local st = new("UIStroke", {Thickness = 1, Transparency = 0.35, Parent = card})
+		local st = new("UIStroke", {Name = "CardStroke", Thickness = 1, Transparency = 0.35, Parent = card})
 		bind(st, "Color", "Stroke")
 		new("UIScale", {Name = "Scale", Parent = card})
 		new("Frame", {Name = "Shine", BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = card}, {corner(8)})
+		new("Frame", {Name = "Ripples", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true, Parent = card}, {corner(8)})
 		return card
 	end
 
@@ -374,29 +513,56 @@ function PingoUI.CreateWindow(title, version, config)
 	end
 
 	local function hover(card, src)
-		local shine = card.Shine
-		src.MouseEnter:Connect(function() tw(shine, 0.15, {BackgroundTransparency = 0.93}) end)
-		src.MouseLeave:Connect(function() tw(shine, 0.15, {BackgroundTransparency = 1}) end)
+		local shine, stroke = card.Shine, card.CardStroke
+		src.MouseEnter:Connect(function()
+			tw(shine, 0.15, {BackgroundTransparency = 0.94})
+			tw(stroke, 0.2, {Color = T("Accent"), Transparency = 0.1})
+		end)
+		src.MouseLeave:Connect(function()
+			tw(shine, 0.2, {BackgroundTransparency = 1})
+			tw(stroke, 0.25, {Color = T("Stroke"), Transparency = 0.35})
+		end)
+	end
+
+	local function ripple(card, input)
+		local holder = card:FindFirstChild("Ripples")
+		if not holder then return end
+		local ap, as = card.AbsolutePosition, card.AbsoluteSize
+		local fx = math.clamp((input.Position.X - ap.X) / math.max(as.X, 1), 0, 1)
+		local fy = math.clamp((input.Position.Y - ap.Y) / math.max(as.Y, 1), 0, 1)
+		local r = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(fx, fy), Size = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, Parent = holder}, {corner(200)})
+		tw(r, 0.6, {Size = UDim2.fromOffset(300, 300), BackgroundTransparency = 1}, Q)
+		task.delay(0.65, function() r:Destroy() end)
 	end
 
 	local function hitButton(card)
-		return new("TextButton", {Name = "Hit", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = card})
+		local hit = new("TextButton", {Name = "Hit", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = card})
+		hit.InputBegan:Connect(function(input) if isPress(input) then ripple(card, input) end end)
+		return hit
+	end
+
+	local function pressFx(card, hit)
+		local sc = card.Scale
+		hit.MouseButton1Down:Connect(function() tw(sc, 0.1, {Scale = 0.95}) end)
+		hit.MouseButton1Up:Connect(function() tw(sc, 0.35, {Scale = 1}, BACK) end)
+		hit.MouseLeave:Connect(function() tw(sc, 0.2, {Scale = 1}) end)
 	end
 
 	-- ---------- Tabs ----------
 	local function layoutTabs(st)
 		local n = #st.Tabs
-		for _, t in ipairs(st.Tabs) do
-			t.Button.Size = UDim2.new(1 / n, -(4 * (n - 1)) / n, 1, 0)
+		for i, t in ipairs(st.Tabs) do
+			t.Button.Position = UDim2.new((i - 1) / n, (i - 1) * GAP / n, 0, 0)
+			t.Button.Size = UDim2.new(1 / n, -GAP * (n - 1) / n, 1, 0)
 		end
+		if st.IndIdx then moveTabPill(st, st.IndIdx, true) end
 	end
 
 	local function createTab(st, name, opts)
 		opts = opts or {}
-		local tab = {Name = name, SideTab = st, Cards = {}}
+		local tab = {Name = name, SideTab = st, Cards = {}, Index = #st.Tabs + 1}
 
-		local btn = new("TextButton", {Name = name, Text = name, Font = Enum.Font.GothamMedium, TextSize = 13, AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = #st.Tabs + 1, Parent = st.TabBar}, {corner(6)})
-		bind(btn, "BackgroundColor3", "Card")
+		local btn = new("TextButton", {Name = name, Text = name, Font = Enum.Font.GothamMedium, TextSize = 13, AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2, Parent = st.TabInner})
 		bind(btn, "TextColor3", "SubText")
 		tab.Button = btn
 
@@ -412,66 +578,59 @@ function PingoUI.CreateWindow(title, version, config)
 		if win.ActiveSideTab == st then st.TabBar.Visible = true end
 
 		btn.MouseButton1Click:Connect(function() selectTab(tab) end)
-		btn.MouseEnter:Connect(function()
-			if st.ActiveTab ~= tab then tw(btn, 0.15, {BackgroundTransparency = 0.7}) end
-		end)
-		btn.MouseLeave:Connect(function()
-			if st.ActiveTab ~= tab then tw(btn, 0.15, {BackgroundTransparency = 1}) end
-		end)
+		btn.MouseEnter:Connect(function() if st.ActiveTab ~= tab then bind(btn, "TextColor3", "Text", true) end end)
+		btn.MouseLeave:Connect(function() if st.ActiveTab ~= tab then bind(btn, "TextColor3", "SubText", true) end end)
 
 		if win.ActiveSideTab == st and not st.ActiveTab then selectTab(tab) end
 
 		-- ===== BUTTON =====
-		function tab:AddButton(name, callback)
-			local card = newCard(name)
-			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -28, 1, 0), Parent = card})
+		function tab:AddButton(bname, callback)
+			local card = newCard(bname)
+			mkText("TextLabel", {Text = bname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -28, 1, 0), Parent = card})
 			local hit = hitButton(card)
 			hover(card, hit)
-			local sc, shine = card.Scale, card.Shine
-			hit.MouseButton1Down:Connect(function() tw(sc, 0.1, {Scale = 0.96}); tw(shine, 0.1, {BackgroundTransparency = 0.85}) end)
-			hit.MouseButton1Up:Connect(function() tw(sc, 0.2, {Scale = 1}, Enum.EasingStyle.Back); tw(shine, 0.2, {BackgroundTransparency = 0.93}) end)
-			hit.MouseLeave:Connect(function() tw(sc, 0.15, {Scale = 1}) end)
+			pressFx(card, hit)
 			hit.MouseButton1Click:Connect(function()
 				if callback then task.spawn(callback) end
 			end)
-			finish(tab, card, name)
+			finish(tab, card, bname)
 			return {Card = card}
 		end
 
 		-- ===== TOGGLE =====
-		function tab:AddToggle(name, default, callback)
+		function tab:AddToggle(tname, default, callback)
 			local state = default == true
-			local card = newCard(name)
-			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -72, 1, 0), Parent = card})
+			local card = newCard(tname)
+			mkText("TextLabel", {Text = tname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -72, 1, 0), Parent = card})
 			local sw = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0, Parent = card}, {corner(11)})
 			bind(sw, "BackgroundColor3", state and "Accent" or "Off")
 			local knob = new("Frame", {AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(16, 16), Position = state and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw}, {corner(8)})
 			local hit = hitButton(card)
 			hover(card, hit)
-			local sc = card.Scale
+			pressFx(card, hit)
 
 			local obj = {Card = card}
 			local function apply(v, fire)
 				state = v
 				bind(sw, "BackgroundColor3", state and "Accent" or "Off", true)
-				tw(knob, 0.22, {Position = state and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)}, Enum.EasingStyle.Back)
+				-- stretch then settle
+				tw(knob, 0.12, {Size = UDim2.fromOffset(24, 16)})
+				task.delay(0.1, function()
+					tw(knob, 0.35, {Size = UDim2.fromOffset(16, 16), Position = state and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)}, BACK)
+				end)
 				if fire and callback then task.spawn(callback, state) end
 			end
 			function obj:Set(v) apply(v == true, true) end
 			function obj:Get() return state end
-
-			hit.MouseButton1Down:Connect(function() tw(sc, 0.1, {Scale = 0.97}) end)
-			hit.MouseButton1Up:Connect(function() tw(sc, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
-			hit.MouseLeave:Connect(function() tw(sc, 0.15, {Scale = 1}) end)
 			hit.MouseButton1Click:Connect(function() apply(not state, true) end)
 
-			finish(tab, card, name)
+			finish(tab, card, tname)
 			if state and callback then task.spawn(callback, true) end
 			return obj
 		end
 
 		-- ===== SLIDER =====
-		function tab:AddSlider(name, min, max, default, callback, increment)
+		function tab:AddSlider(sname, min, max, default, callback, increment)
 			min, max = min or 0, max or 100
 			increment = increment or 1
 			local dec = 0
@@ -483,14 +642,17 @@ function PingoUI.CreateWindow(title, version, config)
 				return tonumber(string.format("%." .. dec .. "f", v))
 			end
 
-			local card = newCard(name)
-			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -90, 0, 16), Parent = card})
-			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8), Size = UDim2.fromOffset(64, 16), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = card}, "SubText")
+			local card = newCard(sname)
+			mkText("TextLabel", {Text = sname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -90, 0, 16), Parent = card})
+			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8), Size = UDim2.fromOffset(64, 16), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = card}, "SubText")
+			local valScale = new("UIScale", {Parent = valLbl})
 			local track = new("Frame", {Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 6), BorderSizePixel = 0, Parent = card}, {corner(3)})
 			bind(track, "BackgroundColor3", "Off")
 			local fill = new("Frame", {Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = track}, {corner(3)})
-			grad(new("UIGradient", {Parent = fill}))
+			grad({"Accent", "Accent2"}, fill)
 			local knob = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(12, 12), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = track}, {corner(6)})
+			local knobStroke = new("UIStroke", {Thickness = 0, Transparency = 0.6, Parent = knob})
+			bind(knobStroke, "Color", "Accent")
 
 			local value
 			local function apply(v, fire, animate)
@@ -498,15 +660,19 @@ function PingoUI.CreateWindow(title, version, config)
 				local pct = (max - min) == 0 and 0 or (v - min) / (max - min)
 				valLbl.Text = tostring(v)
 				if animate then
-					tw(fill, 0.12, {Size = UDim2.fromScale(pct, 1)})
-					tw(knob, 0.12, {Position = UDim2.fromScale(pct, 0.5)})
+					tw(fill, 0.25, {Size = UDim2.fromScale(pct, 1)}, Q)
+					tw(knob, 0.25, {Position = UDim2.fromScale(pct, 0.5)}, Q)
 				else
 					fill.Size = UDim2.fromScale(pct, 1)
 					knob.Position = UDim2.fromScale(pct, 0.5)
 				end
 				if v ~= value then
 					value = v
-					if fire and callback then task.spawn(callback, v) end
+					if fire then
+						valScale.Scale = 1.18
+						tw(valScale, 0.25, {Scale = 1}, BACK)
+						if callback then task.spawn(callback, v) end
+					end
 				end
 			end
 			apply(default or min, false, false)
@@ -519,10 +685,11 @@ function PingoUI.CreateWindow(title, version, config)
 				apply(min + (max - min) * pct, true, false)
 			end
 			hit.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				if isPress(input) then
 					dragging = true
 					page.ScrollingEnabled = false
-					tw(knob, 0.12, {Size = UDim2.fromOffset(17, 17)})
+					tw(knob, 0.2, {Size = UDim2.fromOffset(18, 18)}, BACK)
+					tw(knobStroke, 0.2, {Thickness = 5})
 					fromX(input.Position.X)
 				end
 			end)
@@ -532,24 +699,25 @@ function PingoUI.CreateWindow(title, version, config)
 				end
 			end)
 			A(UIS.InputEnded, function(input)
-				if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+				if dragging and isPress(input) then
 					dragging = false
 					page.ScrollingEnabled = true
-					tw(knob, 0.15, {Size = UDim2.fromOffset(12, 12)})
+					tw(knob, 0.3, {Size = UDim2.fromOffset(12, 12)}, BACK)
+					tw(knobStroke, 0.25, {Thickness = 0})
 				end
 			end)
 
 			local obj = {Card = card}
 			function obj:Set(v) apply(v, true, true) end
 			function obj:Get() return value end
-			finish(tab, card, name)
+			finish(tab, card, sname)
 			return obj
 		end
 
 		-- ===== TEXTBOX =====
-		function tab:AddTextbox(name, placeholder, callback, default)
-			local card = newCard(name)
-			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0.5, -14, 1, 0), Parent = card})
+		function tab:AddTextbox(xname, placeholder, callback, default)
+			local card = newCard(xname)
+			mkText("TextLabel", {Text = xname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0.5, -14, 1, 0), Parent = card})
 			local box = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.46, 0, 0, 30), ClipsDescendants = true, BorderSizePixel = 0, Parent = card}, {corner(6)})
 			bind(box, "BackgroundColor3", "Sidebar")
 			local bs = new("UIStroke", {Thickness = 1, Parent = box})
@@ -557,15 +725,103 @@ function PingoUI.CreateWindow(title, version, config)
 			local input = mkText("TextBox", {Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0), Text = default or "", PlaceholderText = placeholder or "Type...", Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ClearTextOnFocus = false, Parent = box})
 			bind(input, "PlaceholderColor3", "SubText")
 			hover(card, card)
-			input.Focused:Connect(function() bind(bs, "Color", "Accent", true) end)
+			input.Focused:Connect(function()
+				bind(bs, "Color", "Accent", true)
+				tw(bs, 0.2, {Thickness = 2})
+			end)
 			input.FocusLost:Connect(function(enter)
 				bind(bs, "Color", "Stroke", true)
+				tw(bs, 0.2, {Thickness = 1})
 				if callback then task.spawn(callback, input.Text, enter) end
 			end)
 			local obj = {Card = card}
 			function obj:Set(text) input.Text = tostring(text) end
 			function obj:Get() return input.Text end
-			finish(tab, card, name)
+			finish(tab, card, xname)
+			return obj
+		end
+
+		-- ===== LABEL (info) =====
+		function tab:AddLabel(lname, value, shimmer)
+			local card = newCard(lname)
+			mkText("TextLabel", {Text = lname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0.4, -14, 1, 0), Parent = card})
+			local v = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0.6, -14, 0, 22), Text = tostring(value), Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card}, shimmer and "White" or "SubText")
+			if shimmer then
+				local g = grad({"Accent", "Accent2", "Accent"}, v, {Offset = Vector2.new(-0.6, 0)})
+				TweenService:Create(g, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
+			end
+			hover(card, card)
+			finish(tab, card, lname)
+			local obj = {Card = card}
+			function obj:Set(t) v.Text = tostring(t) end
+			return obj
+		end
+
+		-- ===== STEPPER (-  value  +) =====
+		function tab:AddStepper(stname, min, max, default, step, callback, minusImg, plusImg, fmt)
+			step = step or 1
+			fmt = fmt or function(v) return tostring(v) end
+			local value = math.clamp(default or min, min, max)
+			local card = newCard(stname)
+			mkText("TextLabel", {Text = stname, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -150, 1, 0), Parent = card})
+			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -46, 0.5, 0), Size = UDim2.fromOffset(56, 24), Text = fmt(value), Font = Enum.Font.GothamBold, TextSize = 13, Parent = card}, "Text")
+			local valScale = new("UIScale", {Parent = valLbl})
+
+			local function apply(v, fire)
+				v = math.clamp(v, min, max)
+				if v == value and fire then
+					tw(valScale, 0.08, {Scale = 0.85}); task.delay(0.08, function() tw(valScale, 0.25, {Scale = 1}, BACK) end)
+					return
+				end
+				value = v
+				valLbl.Text = fmt(v)
+				valScale.Scale = 1.3
+				tw(valScale, 0.35, {Scale = 1}, BACK)
+				if fire and callback then task.spawn(callback, v) end
+			end
+
+			local function mkBtn(img, xoff, dir)
+				local b = new("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, xoff, 0.5, 0), Size = UDim2.fromOffset(28, 28), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 4, Parent = card}, {corner(8)})
+				bind(b, "BackgroundColor3", "Sidebar")
+				local s = new("UIScale", {Parent = b})
+				local im = new("ImageLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -8, 1, -8), BackgroundTransparency = 1, Image = icon(img) or "", ZIndex = 5, Parent = b})
+				bind(im, "ImageColor3", "Text")
+				local token = 0
+				b.InputBegan:Connect(function(input)
+					if isPress(input) then
+						token = token + 1
+						local my = token
+						tw(s, 0.1, {Scale = 0.78})
+						tw(b, 0.1, {BackgroundColor3 = T("AccentDark")})
+						tw(im, 0.1, {Rotation = dir * 18})
+						ripple(card, input)
+						apply(value + dir * step, true)
+						task.delay(0.4, function()
+							while token == my and b.Parent do
+								apply(value + dir * step, true)
+								task.wait(0.07)
+							end
+						end)
+					end
+				end)
+				local function release()
+					token = token + 1
+					tw(s, 0.35, {Scale = 1}, BACK)
+					tw(b, 0.25, {BackgroundColor3 = T("Sidebar")})
+					tw(im, 0.35, {Rotation = 0}, BACK)
+				end
+				b.InputEnded:Connect(function(input) if isPress(input) then release() end end)
+				b.MouseLeave:Connect(release)
+				return b
+			end
+			mkBtn(minusImg, -108, -1)
+			mkBtn(plusImg, -12, 1)
+
+			hover(card, card)
+			finish(tab, card, stname)
+			local obj = {Card = card}
+			function obj:Set(v) apply(v, true) end
+			function obj:Get() return value end
 			return obj
 		end
 
@@ -573,32 +829,43 @@ function PingoUI.CreateWindow(title, version, config)
 	end
 
 	-- ---------- Side tabs ----------
+	local topCount, bottomCount = 0, 0
 	local function createSideTab(name, iconId, bottom)
 		local st = {Name = name, Tabs = {}, Bottom = bottom}
-		local btn = new("TextButton", {Name = name, Size = UDim2.new(1, 0, 0, 38), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = #win.SideTabs + 1, Parent = bottom and BottomHolder or SideList}, {corner(9)})
-		bind(btn, "BackgroundColor3", "Accent")
+		if bottom then
+			bottomCount = bottomCount + 1
+			st.Y = navH - 48 - (bottomCount - 1) * 42
+			st.Order = 1000 + bottomCount
+		else
+			topCount = topCount + 1
+			st.Y = 2 + (topCount - 1) * 42
+			st.Order = topCount
+		end
+
+		local btn = new("TextButton", {Name = name, Position = UDim2.fromOffset(10, st.Y), Size = UDim2.new(1, -20, 0, 38), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2, Parent = Nav})
 		st.Button = btn
 
 		local pad = 14
 		local ico = icon(iconId)
 		if ico then
 			pad = 42
-			st.Icon = new("ImageLabel", {Image = ico, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 13, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Parent = btn})
+			st.Icon = new("ImageLabel", {Image = ico, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 13, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 3, Parent = btn})
 			bind(st.Icon, "ImageColor3", "Text")
 		end
-		st.Label = mkText("TextLabel", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(pad, 0), Size = UDim2.new(1, -pad - 8, 1, 0), Parent = btn})
+		st.Pad = pad
+		st.Label = mkText("TextLabel", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(pad, 0), Size = UDim2.new(1, -pad - 8, 1, 0), ZIndex = 3, Parent = btn})
 
-		st.TabBar = new("Frame", {Name = name, Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Visible = false, Parent = TabBarHolder}, {
-			corner(8),
-			new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
-			new("UIPadding", {PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3)}),
-		})
+		-- tab bar (own sliding pill)
+		st.TabBar = new("Frame", {Name = name, Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Visible = false, Parent = TabBarHolder}, {corner(8)})
 		bind(st.TabBar, "BackgroundColor3", "Sidebar")
 		local tbs = new("UIStroke", {Thickness = 1, Parent = st.TabBar})
 		bind(tbs, "Color", "Stroke")
+		st.TabInner = new("Frame", {Position = UDim2.fromOffset(3, 3), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1, Parent = st.TabBar})
+		st.TabInd = new("Frame", {Name = "Pill", Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Visible = false, Parent = st.TabInner}, {corner(6)})
+		grad({"AccentDark", "Accent2Dark"}, st.TabInd)
 
-		btn.MouseEnter:Connect(function() if not st.Active then tw(btn, 0.15, {BackgroundTransparency = 0.85}) end end)
-		btn.MouseLeave:Connect(function() if not st.Active then tw(btn, 0.15, {BackgroundTransparency = 1}) end end)
+		btn.MouseEnter:Connect(function() if not st.Active then tw(st.Label, 0.25, {Position = UDim2.new(0, pad + 3, 0, 0)}, Q) end end)
+		btn.MouseLeave:Connect(function() if not st.Active then tw(st.Label, 0.25, {Position = UDim2.new(0, pad, 0, 0)}, Q) end end)
 		btn.MouseButton1Click:Connect(function() selectSideTab(st) end)
 
 		table.insert(win.SideTabs, st)
@@ -615,42 +882,48 @@ function PingoUI.CreateWindow(title, version, config)
 		return st
 	end
 
-	-- ---------- Themes (built-in) ----------
-	local ThemesST = createSideTab("Themes", nil, true)
+	function win:SetSizeMultiplier(m)
+		win.SizeMul = math.clamp(m, 0.3, 1.8)
+		refit(true)
+	end
+
+	-- ---------- Menu Settings (built-in, bottom) ----------
+	local MenuST = createSideTab("Menu Settings", nil, true)
+
+	-- Tab 1: Theme
+	local ThemeTab = createTab(MenuST, "Theme", {CellSize = UDim2.new(0.25, -9, 0, 96)})
 	local ringList = {}
 	local function refreshRings()
-		for name, rings in pairs(ringList) do
-			for _, r in ipairs(rings) do tw(r, 0.2, {Transparency = (name == currentTheme) and 0 or 1}) end
+		for tname, rings in pairs(ringList) do
+			for _, r in ipairs(rings) do tw(r, 0.25, {Transparency = (tname == currentTheme) and 0 or 1}) end
 		end
 	end
 	ringRefreshers[win] = refreshRings
-
-	for _, group in ipairs(THEME_GROUPS) do
-		local tab = createTab(ThemesST, group, {CellSize = UDim2.new(0.25, -9, 0, 96)})
-		for _, info in ipairs(THEME_LIST) do
-			if group == "All" or info[2] == group then
-				local tname = info[1]
-				local card = newCard(tname)
-				new("Frame", {Name = "Swatch", Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -34), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = card}, {
-					corner(6),
-					new("UIGradient", {Rotation = 25, Color = ColorSequence.new(info[3], info[4])}),
-				})
-				mkText("TextLabel", {Text = tname, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 1, -26), Size = UDim2.new(1, -20, 0, 22), Parent = card})
-				local ring = new("Frame", {Name = "Ring", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = card}, {corner(8)})
-				local rs = new("UIStroke", {Thickness = 2, Color = info[3], Transparency = (tname == currentTheme) and 0 or 1, Parent = ring})
-				ringList[tname] = ringList[tname] or {}
-				table.insert(ringList[tname], rs)
-
-				local hit = hitButton(card)
-				hover(card, hit)
-				hit.MouseButton1Down:Connect(function() tw(card.Scale, 0.1, {Scale = 0.96}) end)
-				hit.MouseButton1Up:Connect(function() tw(card.Scale, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
-				hit.MouseLeave:Connect(function() tw(card.Scale, 0.15, {Scale = 1}) end)
-				hit.MouseButton1Click:Connect(function() PingoUI.SetTheme(tname) end)
-				finish(tab, card, tname, false)
-			end
-		end
+	for _, info in ipairs(THEME_LIST) do
+		local tname = info[1]
+		local card = newCard(tname)
+		new("Frame", {Name = "Swatch", Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -34), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = card}, {
+			corner(6),
+			new("UIGradient", {Rotation = 25, Color = ColorSequence.new(info[2], info[3])}),
+		})
+		mkText("TextLabel", {Text = tname, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 1, -26), Size = UDim2.new(1, -20, 0, 22), Parent = card})
+		local ring = new("Frame", {Name = "Ring", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = card}, {corner(8)})
+		local rs = new("UIStroke", {Thickness = 2, Color = info[2], Transparency = (tname == currentTheme) and 0 or 1, Parent = ring})
+		ringList[tname] = {rs}
+		local hit = hitButton(card)
+		hover(card, hit)
+		pressFx(card, hit)
+		hit.MouseButton1Click:Connect(function() PingoUI.SetTheme(tname) end)
+		finish(ThemeTab, card, tname, false)
 	end
+
+	-- Tab 2: UI (Menu Size + Update info)
+	local UITab = createTab(MenuST, "UI")
+	UITab:AddStepper("Menu Size", 60, 140, 100, 10, function(v) win:SetSizeMultiplier(v / 100) end, 12338394619, 12338396009, function(v) return v .. "%" end)
+	UITab:AddLabel("Update", updateName, true)
+	UITab:AddLabel("Name", title)
+	UITab:AddLabel("Version", version)
+	UITab:AddLabel("Library", "PingoUI " .. PingoUI.Version)
 
 	-- ---------- Open / Close ----------
 	local token = 0
@@ -662,16 +935,20 @@ function PingoUI.CreateWindow(title, version, config)
 		local my = token
 		if state then
 			Holder.Visible = true
-			openScale.Scale = 0.88
+			openScale.Scale = 0.86
 			Main.GroupTransparency = 1
-			tw(openScale, 0.35, {Scale = 1}, Enum.EasingStyle.Back)
-			tw(Main, 0.25, {GroupTransparency = 0})
-			local st = win.ActiveSideTab
-			if st and st.ActiveTab then playIn(st.ActiveTab) end
+			Sidebar.Position = UDim2.fromOffset(-40, 0)
+			Content.Position = UDim2.fromOffset(210, 0)
+			tw(openScale, 0.5, {Scale = 1}, BACK)
+			tw(Main, 0.3, {GroupTransparency = 0})
+			tw(Sidebar, 0.6, {Position = UDim2.fromOffset(0, 0)}, Q)
+			tw(Content, 0.6, {Position = UDim2.fromOffset(170, 0)}, Q)
+			local t = win.CurrentTab
+			if t then playIn(t) end
 		else
-			tw(openScale, 0.2, {Scale = 0.92}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			tw(Main, 0.2, {GroupTransparency = 1})
-			task.delay(0.22, function()
+			tw(openScale, 0.25, {Scale = 0.9}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tw(Main, 0.22, {GroupTransparency = 1})
+			task.delay(0.26, function()
 				if token == my then Holder.Visible = false end
 			end)
 		end
@@ -694,11 +971,11 @@ function PingoUI.CreateWindow(title, version, config)
 	else
 		mkText("TextLabel", {Text = string.sub(title, 1, 1), Font = Enum.Font.GothamBold, TextSize = 24, Size = UDim2.fromScale(1, 1), Parent = OpenBtn}, "Accent")
 	end
-	OpenBtn.MouseEnter:Connect(function() tw(obScale, 0.15, {Scale = 1.08}) end)
-	OpenBtn.MouseLeave:Connect(function() tw(obScale, 0.15, {Scale = 1}) end)
+	OpenBtn.MouseEnter:Connect(function() tw(obScale, 0.2, {Scale = 1.1}, BACK) end)
+	OpenBtn.MouseLeave:Connect(function() tw(obScale, 0.2, {Scale = 1}, BACK) end)
 	makeDraggable(OpenBtn, OpenBtn, function()
-		tw(obScale, 0.08, {Scale = 0.92})
-		task.delay(0.08, function() tw(obScale, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
+		obScale.Scale = 0.88
+		tw(obScale, 0.35, {Scale = 1}, BACK)
 		win:Toggle()
 	end)
 
@@ -718,11 +995,11 @@ function PingoUI.CreateWindow(title, version, config)
 		bind(bar, "BackgroundColor3", "Accent")
 		mkText("TextLabel", {Text = tostring(nTitle or ""), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(20, 8), Size = UDim2.new(1, -30, 0, 18), Parent = n})
 		mkText("TextLabel", {Text = tostring(text or ""), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Position = UDim2.fromOffset(20, 27), Size = UDim2.new(1, -30, 1, -32), Parent = n}, "SubText")
-		tw(n, 0.35, {Position = UDim2.fromOffset(0, 0)}, Enum.EasingStyle.Back)
+		tw(n, 0.5, {Position = UDim2.fromOffset(0, 0)}, BACK)
 		task.delay(duration or 3, function()
 			if not n.Parent then return end
-			tw(n, 0.25, {Position = UDim2.fromOffset(300, 0)}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			task.delay(0.28, function() wrap:Destroy() end)
+			tw(n, 0.3, {Position = UDim2.fromOffset(300, 0)}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			task.delay(0.32, function() wrap:Destroy() end)
 		end)
 	end
 
@@ -735,7 +1012,7 @@ function PingoUI.CreateWindow(title, version, config)
 	end
 
 	-- ---------- Start ----------
-	selectSideTab(ThemesST)
+	selectSideTab(MenuST)
 	if not config.StartHidden then win:Toggle(true) end
 
 	return win
