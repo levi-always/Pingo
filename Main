@@ -1,10 +1,13 @@
 --[[
-    NovaUI  |  Single-file UI library
+    NovaUI v2  |  Single-file UI library
     ------------------------------------------------------------
-    Hold any element for 0.8s  ->  Properties (Favourite / Hide / Floating)
-    Floating widgets           ->  drag, hold for Lock / Hide / Remove
-    Config tab                 ->  Create / Save / Load / Auto-Load / Rename / Delete
-    Dropdown                   ->  animated, searchable, Multi + Max selections
+    Every Button / Toggle / Slider:
+      [↗]  Float   -> pops the element out as a floating widget (no hold)
+      [▾]  Props   -> expands settings panel below the element (only if Settings given)
+    Hold 0.8s on any element -> Favourite / Hide (Dropdown also Reset)
+    Floating widget          -> drag, hold for Lock / Hide / Remove
+    Config tab               -> Create / Save / Load / Auto-Load / Rename / Delete
+    Dropdown                 -> animated, searchable, Multi + Max
 ]]
 
 local Players = game:GetService("Players")
@@ -175,7 +178,7 @@ local function fsList()
 end
 
 -- ============================================================
---  LAYOUT PRIMITIVES
+--  INPUT HELPERS
 -- ============================================================
 local function makeDraggable(handle, frame, canDrag, onEnd)
 	local dragging, startIn, startPos = false, nil, nil
@@ -198,7 +201,7 @@ local function makeDraggable(handle, frame, canDrag, onEnd)
 	end)
 end
 
--- Hold (0.8s) vs tap detection. Moving more than 8px cancels both.
+-- Hold (0.8s) vs tap. Moving more than 8px cancels both.
 local function attachHold(hit, onHold, onTap)
 	local st = {pressing = false, held = false, moved = false, start = nil, token = 0}
 	hit.InputBegan:Connect(function(input)
@@ -228,21 +231,28 @@ local function attachHold(hit, onHold, onTap)
 	end)
 end
 
-local function newRow(tab, h)
-	local row = bind(make("Frame", {Size = UDim2.new(1, 0, 0, h), BorderSizePixel = 0, Parent = tab.Page}), "BackgroundColor3", "Card")
+-- ============================================================
+--  ROW PRIMITIVES
+-- ============================================================
+local function newRow(container, h, bgKey)
+	local row = bind(make("Frame", {
+		Size = UDim2.new(1, 0, 0, h), BorderSizePixel = 0, ClipsDescendants = true, Parent = container,
+	}), "BackgroundColor3", bgKey or "Card")
 	corner(8, row)
 	bind(make("UIStroke", {Thickness = 1, Transparency = 0.4, Parent = row}), "Color", "Stroke")
 	local hit = make("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = row})
 	local star = bind(make("ImageLabel", {
-		BackgroundTransparency = 1, Image = ICON.Star, AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -8, 0, 8), Size = UDim2.fromOffset(12, 12), Visible = false, Parent = row,
+		BackgroundTransparency = 1, Image = ICON.Star,
+		Position = UDim2.new(0, 2, 1, -12), Size = UDim2.fromOffset(9, 9),
+		Visible = false, Parent = row,
 	}), "ImageColor3", "Accent")
 	return row, hit, star
 end
 
-local function header(row, h, name, desc, rightPad, forceTop)
+-- rp = extra right reserve (beyond the 12px margin)
+local function header(row, h, name, desc, rp, forceTop)
 	local top = desc ~= nil or forceTop == true
-	local rp = rightPad or 12
+	rp = rp or 0
 	local title = bind(make("TextLabel", {
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(12, top and 8 or 0),
@@ -263,6 +273,17 @@ local function header(row, h, name, desc, rightPad, forceTop)
 	return title
 end
 
+local function iconBtn(parent, glyph, order)
+	local b = make("TextButton", {
+		Size = UDim2.fromOffset(24, 24), BorderSizePixel = 0, AutoButtonColor = false,
+		Font = Enum.Font.GothamBold, TextSize = 13, Text = glyph, LayoutOrder = order, ZIndex = 6, Parent = parent,
+	})
+	corner(6, b)
+	bind(b, "BackgroundColor3", "Off")
+	bind(b, "TextColor3", "Text")
+	return b
+end
+
 local function makePage(parent)
 	return make("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -279,21 +300,6 @@ local function homeOf(win, r)
 	return r.Tab.Page
 end
 
-local function register(tab, rec)
-	local win = tab.Window
-	win.Order = win.Order + 1
-	rec.Order = win.Order
-	rec.Tab = tab
-	rec.Lower = string.lower(rec.Name)
-	rec.Favourite = false
-	rec.Hidden = false
-	rec.Id = tab.Name .. "/" .. rec.Name
-	table.insert(tab.Elements, rec)
-	table.insert(win.Elements, rec)
-	win:_refresh()
-	return rec
-end
-
 -- ============================================================
 --  CLASSES
 -- ============================================================
@@ -304,285 +310,388 @@ local Tab = {}
 Tab.__index = Tab
 
 -- ============================================================
---  TAB ELEMENTS
+--  ELEMENT FACTORY (top-level elements and Settings children)
 -- ============================================================
-function Tab:AddButton(o)
-	o = o or {}
-	local win = self.Window
-	local h = o.Description and 56 or 46
-	local row, hit, star = newRow(self, h)
-	header(row, h, o.Name or "Button", o.Description, 14)
-	local rec = {Name = o.Name or "Button", Kind = "Button", Row = row, Star = star}
-	rec.Fire = function() if o.Callback then task.spawn(o.Callback) end end
-	register(self, rec)
-	attachHold(hit, function() win:_elementMenu(rec) end, rec.Fire)
-	return rec
+local EXTRA_RESERVE = {Button = 0, Toggle = 52, Slider = 96, Dropdown = 170}
+
+local function rowHeight(kind, hasDesc, isChild)
+	if isChild then return kind == "Slider" and 50 or 40 end
+	if kind == "Slider" then return hasDesc and 66 or 54 end
+	return hasDesc and 56 or 46
 end
 
-function Tab:AddToggle(o)
+local function makeElement(kind, target, o, parentRec)
 	o = o or {}
-	local win = self.Window
-	local h = o.Description and 56 or 46
-	local row, hit, star = newRow(self, h)
-	header(row, h, o.Name or "Toggle", o.Description, 64)
-	local sw = bind(make("Frame", {
-		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
-		Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0, Parent = row,
-	}), "BackgroundColor3", "Off")
-	corner(11, sw)
-	local knob = make("Frame", {
-		Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(16, 16),
-		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw,
-	})
-	corner(8, knob)
+	local isChild = parentRec ~= nil
+	local win = isChild and parentRec.Win or target.Window
+	local container = isChild and target or target.Page
+	local tab = (not isChild) and target or nil
 
-	local state = false
-	local rec = {Name = o.Name or "Toggle", Kind = "Toggle", Row = row, Star = star, Default = o.Default == true}
-	local function apply(v, fire)
-		if fire and v == state then return end
-		state = v
-		bind(sw, "BackgroundColor3", state and "Accent" or "Off", true)
-		tw(knob, 0.3, {Position = state and UDim2.fromOffset(21, 3) or UDim2.fromOffset(3, 3)}, Enum.EasingStyle.Back)
-		if rec.FloatUpdate then rec.FloatUpdate() end
-		if fire and o.Callback then task.spawn(o.Callback, state) end
-	end
-	rec.Get = function() return state end
-	rec.Set = function(v) apply(v == true, true) end
-	apply(o.Default == true, false)
-	register(self, rec)
-	attachHold(hit, function() win:_elementMenu(rec) end, function() rec.Set(not state) end)
-	return rec
-end
+	local hasDesc = (not isChild) and o.Description ~= nil and o.Description ~= ""
+	local descText = hasDesc and o.Description or nil
+	local h = rowHeight(kind, hasDesc, isChild)
 
-function Tab:AddSlider(o)
-	o = o or {}
-	local win = self.Window
-	local min, max = o.Min or 0, o.Max or 100
-	local inc = o.Increment or 1
-	local suffix = o.Suffix or ""
-	local h = o.Description and 66 or 54
-	local row, hit, star = newRow(self, h)
-	header(row, h, o.Name or "Slider", o.Description, 90, true)
+	-- Floating button: every top-level Button / Toggle / Slider
+	local canFloat = (not isChild) and kind ~= "Dropdown"
+	-- Properties panel: only when developer provides Settings
+	local settings = (not isChild) and kind ~= "Dropdown" and o.Settings or nil
+	local hasProp = type(settings) == "table" and #settings > 0
 
-	local valLbl = bind(make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 8),
-		Size = UDim2.fromOffset(90, 18), Font = Enum.Font.GothamBold, TextSize = 12,
-		TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = row,
-	}), "TextColor3", "Accent")
+	local ctrlCount = (canFloat and 1 or 0) + (hasProp and 1 or 0)
+	local ctrlW = ctrlCount * 24 + math.max(ctrlCount - 1, 0) * 6
+	local ctrlReserve = ctrlW > 0 and (ctrlW + 10) or 0
 
-	local track = bind(make("Frame", {
-		Position = UDim2.new(0, 12, 0, h - 14), Size = UDim2.new(1, -24, 0, 6),
-		BorderSizePixel = 0, Parent = row,
-	}), "BackgroundColor3", "Off")
-	corner(3, track)
-	local fill = bind(make("Frame", {Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, Parent = track}), "BackgroundColor3", "Accent")
-	corner(3, fill)
-	local knob = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5),
-		Size = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0, ZIndex = 2, Parent = track,
-	})
-	corner(6, knob)
-
-	local value = min
-	local rec = {Name = o.Name or "Slider", Kind = "Slider", Row = row, Star = star, Min = min, Max = max, Suffix = suffix, Default = o.Default}
-
-	local function snap(v)
-		v = math.floor((v - min) / inc + 0.5) * inc + min
-		v = math.clamp(v, min, max)
-		return tonumber(string.format("%.6g", v))
+	local name = tostring(o.Name or kind)
+	local rec = {
+		Name = name, Kind = kind, Win = win, Default = o.Default,
+		Children = {}, Favourite = false, Hidden = false, Lower = string.lower(name),
+	}
+	if tab then
+		rec.Tab = tab
+		rec.Id = tab.Name .. "/" .. name
+	else
+		rec.Id = parentRec.Id .. "/" .. name
+		rec.Child = true
 	end
 
-	local function show(v, fire)
-		value = snap(v)
-		local pct = (max > min) and (value - min) / (max - min) or 0
-		tw(fill, 0.12, {Size = UDim2.fromScale(pct, 1)}, Enum.EasingStyle.Quad)
-		tw(knob, 0.12, {Position = UDim2.fromScale(pct, 0.5)}, Enum.EasingStyle.Quad)
-		valLbl.Text = tostring(value) .. suffix
-		if rec.FloatUpdate then rec.FloatUpdate() end
-		if fire and o.Callback then task.spawn(o.Callback, value) end
-	end
+	local row, hit, star = newRow(container, h, isChild and "Panel" or "Card")
+	rec.Row, rec.Star = row, star
+	if isChild then star.Visible = false end
 
-	rec.Get = function() return value end
-	rec.Set = function(v) show(tonumber(v) or min, true) end
-	show(tonumber(o.Default) or min, false)
+	header(row, h, name, descText, ctrlReserve + (EXTRA_RESERVE[kind] or 0), kind == "Slider")
 
-	local dragging = false
-	local function fromX(x)
-		local pct = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
-		show(min + (max - min) * pct, true)
-	end
-	hit.InputBegan:Connect(function(i)
-		if isPress(i) then dragging = true; fromX(i.Position.X) end
-	end)
-	UIS.InputChanged:Connect(function(i)
-		if dragging and isMove(i) then fromX(i.Position.X) end
-	end)
-	UIS.InputEnded:Connect(function(i)
-		if isPress(i) then dragging = false end
-	end)
-
-	register(self, rec)
-	attachHold(hit, function() win:_elementMenu(rec) end, nil)
-	return rec
-end
-
-function Tab:AddDropdown(o)
-	o = o or {}
-	local win = self.Window
-	local options = o.Options or {}
-	local multi = o.Multi == true
-	local maxSel = multi and (o.Max or math.huge) or 1
-	local h = o.Description and 56 or 46
-	local visibleRows = math.min(math.max(#options, 1), o.MaxVisible or 5)
-	local openH = h + 42 + visibleRows * 29 + 8
-
-	local row, hit, star = newRow(self, h)
-	row.ClipsDescendants = true
-	header(row, h, o.Name or "Dropdown", o.Description, 170)
-
-	local selLbl = bind(make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -34, 0, 0),
-		Size = UDim2.fromOffset(130, h), Font = Enum.Font.Gotham, TextSize = 12,
-		TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center,
-		TextTruncate = Enum.TextTruncate.AtEnd, Text = "", Parent = row,
-	}), "TextColor3", "SubText")
-
-	local arrow = bind(make("TextLabel", {
-		BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(1, -16, 0, math.floor(h / 2)), Size = UDim2.fromOffset(14, 14),
-		Font = Enum.Font.GothamBold, TextSize = 11, Text = "▼", Parent = row,
-	}), "TextColor3", "Accent")
-
-	local body = make("Frame", {
-		Position = UDim2.fromOffset(0, h), Size = UDim2.new(1, 0, 0, 0),
-		BackgroundTransparency = 1, ClipsDescendants = true, Parent = row,
-	})
-	local search = make("TextBox", {
-		Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -20, 0, 28),
-		BorderSizePixel = 0, Font = Enum.Font.Gotham, TextSize = 12,
-		TextXAlignment = Enum.TextXAlignment.Left, Text = "", PlaceholderText = "Search...",
-		ClearTextOnFocus = false, Parent = body,
-	}, {make("UIPadding", {PaddingLeft = UDim.new(0, 8)})})
-	bind(search, "BackgroundColor3", "Panel")
-	bind(search, "TextColor3", "Text")
-	bind(search, "PlaceholderColor3", "SubText")
-	corner(7, search)
-
-	local list = make("ScrollingFrame", {
-		Position = UDim2.fromOffset(10, 38), Size = UDim2.new(1, -20, 1, -44),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = body,
-	}, {make("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder})})
-
-	local selected, buttons, open = {}, {}, false
-	local rec = {Name = o.Name or "Dropdown", Kind = "Dropdown", Row = row, Star = star, Default = o.Default}
-
-	local function values()
-		local out = {}
-		for _, n in ipairs(options) do
-			if selected[n] then table.insert(out, n) end
-		end
-		return out
-	end
-
-	local function count()
-		local n = 0
-		for _ in pairs(selected) do n = n + 1 end
-		return n
-	end
-
-	local function render()
-		local vals = values()
-		if #vals == 0 then
-			selLbl.Text = "None"
-		elseif multi then
-			selLbl.Text = #vals .. " / " .. (maxSel == math.huge and "∞" or tostring(maxSel))
+	local function onTap(fn)
+		if isChild then
+			hit.MouseButton1Click:Connect(fn)
 		else
-			selLbl.Text = vals[1]
-		end
-		for _, b in ipairs(buttons) do
-			bind(b.Btn, "BackgroundColor3", selected[b.Name] and "Accent" or "Panel", true)
+			attachHold(hit, function() win:_elementMenu(rec) end, fn)
 		end
 	end
 
-	local function fire()
-		if o.Callback then
-			local v = values()
-			task.spawn(o.Callback, multi and v or v[1])
+	-- Right-side controls (Float + Properties)
+	local propBtn
+	if ctrlCount > 0 then
+		local ctrl = make("Frame", {
+			BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -10, 0, 11), Size = UDim2.fromOffset(ctrlW, 24), ZIndex = 5, Parent = row,
+		}, {
+			make("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				HorizontalAlignment = Enum.HorizontalAlignment.Right,
+				Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+		})
+		if canFloat then
+			local floatBtn = iconBtn(ctrl, "↗", 1)
+			rec.FloatBtn = floatBtn
+			floatBtn.MouseButton1Click:Connect(function() win:_toggleFloat(rec) end)
+		end
+		if hasProp then
+			propBtn = iconBtn(ctrl, "▾", 2)
 		end
 	end
 
-	local function setOpen(v)
-		open = v
-		tw(row, 0.35, {Size = UDim2.new(1, 0, 0, v and openH or h)}, Enum.EasingStyle.Quint)
-		tw(body, 0.35, {Size = UDim2.new(1, 0, 0, v and (openH - h) or 0)}, Enum.EasingStyle.Quint)
-		tw(arrow, 0.3, {Rotation = v and 180 or 0}, Enum.EasingStyle.Back)
-	end
+	-- ===== BUTTON =====
+	if kind == "Button" then
+		rec.Fire = function() if o.Callback then task.spawn(o.Callback) end end
+		onTap(rec.Fire)
 
-	local function pick(name)
-		if multi then
-			if selected[name] then
-				selected[name] = nil
-			elseif count() >= maxSel then
-				win:Notify(rec.Name, "Max " .. tostring(maxSel) .. " selections, remove one first")
-				return
-			else
-				selected[name] = true
+	-- ===== TOGGLE =====
+	elseif kind == "Toggle" then
+		local state = false
+		local sw = bind(make("Frame", {
+			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -(12 + ctrlReserve), 0.5, 0),
+			Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0, Parent = row,
+		}), "BackgroundColor3", "Off")
+		corner(11, sw)
+		local knob = make("Frame", {
+			Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(16, 16),
+			BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw,
+		})
+		corner(8, knob)
+
+		local function apply(v, fire)
+			if fire and v == state then return end
+			state = v
+			bind(sw, "BackgroundColor3", state and "Accent" or "Off", true)
+			tw(knob, 0.3, {Position = state and UDim2.fromOffset(21, 3) or UDim2.fromOffset(3, 3)}, Enum.EasingStyle.Back)
+			if rec.FloatUpdate then rec.FloatUpdate() end
+			if fire and o.Callback then task.spawn(o.Callback, state) end
+		end
+		rec.Get = function() return state end
+		rec.Set = function(v) apply(v == true, true) end
+		apply(o.Default == true, false)
+		onTap(function() rec.Set(not state) end)
+
+	-- ===== SLIDER =====
+	elseif kind == "Slider" then
+		local min, max = o.Min or 0, o.Max or 100
+		local inc = o.Increment or 1
+		local suffix = o.Suffix or ""
+		rec.Min, rec.Max, rec.Suffix = min, max, suffix
+
+		local valLbl = bind(make("TextLabel", {
+			BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -(12 + ctrlReserve), 0, 8), Size = UDim2.fromOffset(90, 18),
+			Font = Enum.Font.GothamBold, TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = row,
+		}), "TextColor3", "Accent")
+
+		local track = bind(make("Frame", {
+			Position = UDim2.new(0, 12, 0, h - 14), Size = UDim2.new(1, -24, 0, 6),
+			BorderSizePixel = 0, Parent = row,
+		}), "BackgroundColor3", "Off")
+		corner(3, track)
+		local fill = bind(make("Frame", {Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, Parent = track}), "BackgroundColor3", "Accent")
+		corner(3, fill)
+		local knob = make("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5),
+			Size = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0, ZIndex = 2, Parent = track,
+		})
+		corner(6, knob)
+
+		local value = min
+		local function snap(v)
+			v = math.floor((v - min) / inc + 0.5) * inc + min
+			v = math.clamp(v, min, max)
+			return tonumber(string.format("%.6g", v))
+		end
+		local function show(v, fire)
+			value = snap(v)
+			local pct = (max > min) and (value - min) / (max - min) or 0
+			tw(fill, 0.12, {Size = UDim2.fromScale(pct, 1)}, Enum.EasingStyle.Quad)
+			tw(knob, 0.12, {Position = UDim2.fromScale(pct, 0.5)}, Enum.EasingStyle.Quad)
+			valLbl.Text = tostring(value) .. suffix
+			if rec.FloatUpdate then rec.FloatUpdate() end
+			if fire and o.Callback then task.spawn(o.Callback, value) end
+		end
+		rec.Get = function() return value end
+		rec.Set = function(v) show(tonumber(v) or min, true) end
+		show(tonumber(o.Default) or min, false)
+
+		local dragging = false
+		local function fromX(x)
+			local pct = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+			show(min + (max - min) * pct, true)
+		end
+		hit.InputBegan:Connect(function(i)
+			if isPress(i) then dragging = true; fromX(i.Position.X) end
+		end)
+		UIS.InputChanged:Connect(function(i)
+			if dragging and isMove(i) then fromX(i.Position.X) end
+		end)
+		UIS.InputEnded:Connect(function(i)
+			if isPress(i) then dragging = false end
+		end)
+		if not isChild then
+			attachHold(hit, function() win:_elementMenu(rec) end, nil)
+		end
+
+	-- ===== DROPDOWN (top-level only) =====
+	elseif kind == "Dropdown" then
+		local options = o.Options or {}
+		local multi = o.Multi == true
+		local maxSel = multi and (o.Max or math.huge) or 1
+		local visibleRows = math.min(math.max(#options, 1), o.MaxVisible or 5)
+		local openH = h + 42 + visibleRows * 29 + 8
+
+		local selLbl = bind(make("TextLabel", {
+			BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -34, 0, 0),
+			Size = UDim2.fromOffset(130, h), Font = Enum.Font.Gotham, TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center,
+			TextTruncate = Enum.TextTruncate.AtEnd, Text = "", Parent = row,
+		}), "TextColor3", "SubText")
+
+		local arrow = bind(make("TextLabel", {
+			BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(1, -16, 0, math.floor(h / 2)), Size = UDim2.fromOffset(14, 14),
+			Font = Enum.Font.GothamBold, TextSize = 11, Text = "▼", Parent = row,
+		}), "TextColor3", "Accent")
+
+		local body = make("Frame", {
+			Position = UDim2.fromOffset(0, h), Size = UDim2.new(1, 0, 0, 0),
+			BackgroundTransparency = 1, ClipsDescendants = true, Parent = row,
+		})
+		local search = make("TextBox", {
+			Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -20, 0, 28),
+			BorderSizePixel = 0, Font = Enum.Font.Gotham, TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left, Text = "", PlaceholderText = "Search...",
+			ClearTextOnFocus = false, Parent = body,
+		}, {make("UIPadding", {PaddingLeft = UDim.new(0, 8)})})
+		bind(search, "BackgroundColor3", "Panel")
+		bind(search, "TextColor3", "Text")
+		bind(search, "PlaceholderColor3", "SubText")
+		corner(7, search)
+
+		local list = make("ScrollingFrame", {
+			Position = UDim2.fromOffset(10, 38), Size = UDim2.new(1, -20, 1, -44),
+			BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = body,
+		}, {make("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder})})
+
+		local selected, buttons, open = {}, {}, false
+
+		local function values()
+			local out = {}
+			for _, n in ipairs(options) do
+				if selected[n] then table.insert(out, n) end
 			end
-		else
-			selected = {[name] = true}
+			return out
 		end
-		render()
-		fire()
-		if not multi then setOpen(false) end
-	end
-
-	for _, name in ipairs(options) do
-		local b = make("TextButton", {
-			Size = UDim2.new(1, -4, 0, 26), BorderSizePixel = 0, AutoButtonColor = false,
-			Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "   " .. tostring(name), Parent = list,
-		}, {corner(6)})
-		bind(b, "BackgroundColor3", "Panel")
-		bind(b, "TextColor3", "Text")
-		b.MouseButton1Click:Connect(function() pick(name) end)
-		table.insert(buttons, {Name = name, Btn = b})
-	end
-
-	search:GetPropertyChangedSignal("Text"):Connect(function()
-		local q = string.lower(search.Text)
-		for _, b in ipairs(buttons) do
-			b.Btn.Visible = q == "" or string.find(string.lower(b.Name), q, 1, true) ~= nil
+		local function count()
+			local n = 0
+			for _ in pairs(selected) do n = n + 1 end
+			return n
 		end
-	end)
-
-	local function setSel(v)
-		selected = {}
-		if type(v) == "table" then
-			for _, n in ipairs(v) do selected[n] = true end
-		elseif v ~= nil then
-			selected[v] = true
+		local function render()
+			local vals = values()
+			if #vals == 0 then
+				selLbl.Text = "None"
+			elseif multi then
+				selLbl.Text = #vals .. " / " .. (maxSel == math.huge and "∞" or tostring(maxSel))
+			else
+				selLbl.Text = vals[1]
+			end
+			for _, b in ipairs(buttons) do
+				bind(b.Btn, "BackgroundColor3", selected[b.Name] and "Accent" or "Panel", true)
+			end
 		end
-		if not multi then
-			local first = values()[1]
+		local function fire()
+			if o.Callback then
+				local v = values()
+				task.spawn(o.Callback, multi and v or v[1])
+			end
+		end
+		local function setOpen(v)
+			open = v
+			tw(row, 0.35, {Size = UDim2.new(1, 0, 0, v and openH or h)}, Enum.EasingStyle.Quint)
+			tw(body, 0.35, {Size = UDim2.new(1, 0, 0, v and (openH - h) or 0)}, Enum.EasingStyle.Quint)
+			tw(arrow, 0.3, {Rotation = v and 180 or 0}, Enum.EasingStyle.Back)
+		end
+		local function pick(n)
+			if multi then
+				if selected[n] then
+					selected[n] = nil
+				elseif count() >= maxSel then
+					win:Notify(rec.Name, "Max " .. tostring(maxSel) .. " selections, remove one first")
+					return
+				else
+					selected[n] = true
+				end
+			else
+				selected = {[n] = true}
+			end
+			render()
+			fire()
+			if not multi then setOpen(false) end
+		end
+
+		for _, n in ipairs(options) do
+			local b = make("TextButton", {
+				Size = UDim2.new(1, -4, 0, 26), BorderSizePixel = 0, AutoButtonColor = false,
+				Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+				Text = "   " .. tostring(n), Parent = list,
+			}, {corner(6)})
+			bind(b, "BackgroundColor3", "Panel")
+			bind(b, "TextColor3", "Text")
+			b.MouseButton1Click:Connect(function() pick(n) end)
+			table.insert(buttons, {Name = n, Btn = b})
+		end
+
+		search:GetPropertyChangedSignal("Text"):Connect(function()
+			local q = string.lower(search.Text)
+			for _, b in ipairs(buttons) do
+				b.Btn.Visible = q == "" or string.find(string.lower(b.Name), q, 1, true) ~= nil
+			end
+		end)
+
+		local function setSel(v)
 			selected = {}
-			if first then selected[first] = true end
+			if type(v) == "table" then
+				for _, n in ipairs(v) do selected[n] = true end
+			elseif v ~= nil then
+				selected[v] = true
+			end
+			if not multi then
+				local first = values()[1]
+				selected = {}
+				if first then selected[first] = true end
+			end
+			render()
 		end
-		render()
+		setSel(o.Default)
+		rec.Get = function()
+			if multi then return values() end
+			return values()[1]
+		end
+		rec.Set = function(v) setSel(v); fire() end
+		onTap(function() setOpen(not open) end)
 	end
 
-	setSel(o.Default)
-	rec.Get = function()
-		if multi then return values() end
-		return values()[1]
-	end
-	rec.Set = function(v) setSel(v); fire() end
+	-- ===== PROPERTIES PANEL (developer-defined settings under the element) =====
+	if hasProp then
+		local gap = 6
+		local listH = 0
+		for _, it in ipairs(settings) do
+			it.Type = it.Type or "Toggle"
+			listH = listH + (it.Type == "Slider" and 50 or 40)
+		end
+		listH = listH + math.max(#settings - 1, 0) * gap
+		local panelH = 24 + listH + 10
 
-	register(self, rec)
-	attachHold(hit, function() win:_elementMenu(rec) end, function() setOpen(not open) end)
+		local panel = make("Frame", {
+			Position = UDim2.fromOffset(0, h), Size = UDim2.new(1, 0, 0, panelH),
+			BackgroundTransparency = 1, Active = true, Parent = row,
+		})
+		local head = make("TextLabel", {
+			BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 6), Size = UDim2.new(1, -24, 0, 14),
+			Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+			Text = "PROPERTIES", Parent = panel,
+		})
+		bind(head, "TextColor3", "SubText")
+
+		local inner = make("Frame", {
+			Position = UDim2.fromOffset(8, 24), Size = UDim2.new(1, -16, 0, listH),
+			BackgroundTransparency = 1, Parent = panel,
+		}, {make("UIListLayout", {Padding = UDim.new(0, gap), SortOrder = Enum.SortOrder.LayoutOrder})})
+
+		for i, it in ipairs(settings) do
+			local child = makeElement(it.Type, inner, it, rec)
+			child.Row.LayoutOrder = i
+		end
+
+		local expanded = false
+		rec.SetExpanded = function(v)
+			expanded = v
+			tw(row, 0.4, {Size = UDim2.new(1, 0, 0, v and (h + panelH) or h)}, Enum.EasingStyle.Quint)
+			tw(propBtn, 0.3, {Rotation = v and 180 or 0}, Enum.EasingStyle.Back)
+			bind(propBtn, "BackgroundColor3", v and "Accent" or "Off", true)
+		end
+		propBtn.MouseButton1Click:Connect(function() rec.SetExpanded(not expanded) end)
+	end
+
+	-- register
+	if tab then
+		win.Order = win.Order + 1
+		rec.Order = win.Order
+		table.insert(tab.Elements, rec)
+		table.insert(win.Elements, rec)
+		win:_refresh()
+	else
+		table.insert(parentRec.Children, rec)
+		table.insert(win.Elements, rec)
+	end
 	return rec
 end
+
+-- ============================================================
+--  TAB ELEMENTS (public API)
+-- ============================================================
+function Tab:AddButton(o) return makeElement("Button", self, o, nil) end
+function Tab:AddToggle(o) return makeElement("Toggle", self, o, nil) end
+function Tab:AddSlider(o) return makeElement("Slider", self, o, nil) end
+function Tab:AddDropdown(o) return makeElement("Dropdown", self, o, nil) end
 
 -- ============================================================
 --  WINDOW INTERNALS
@@ -658,7 +767,7 @@ function Win:_refresh()
 
 	local hid = {}
 	for _, r in ipairs(self.Elements) do
-		if r.Hidden then table.insert(hid, r) end
+		if not r.Child and r.Hidden then table.insert(hid, r) end
 	end
 	table.sort(hid, function(a, b) return a.Order < b.Order end)
 	for i, r in ipairs(hid) do r.Row.LayoutOrder = i end
@@ -670,11 +779,13 @@ function Win:_refresh()
 
 	local q = self.SearchQuery
 	for _, r in ipairs(self.Elements) do
-		r.Star.Visible = r.Favourite
-		if q == "" then
-			r.Row.Parent = homeOf(self, r)
-		else
-			r.Row.Parent = string.find(r.Lower, q, 1, true) and self.SearchPage or nil
+		if not r.Child then
+			r.Star.Visible = r.Favourite
+			if q == "" then
+				r.Row.Parent = homeOf(self, r)
+			else
+				r.Row.Parent = string.find(r.Lower, q, 1, true) and self.SearchPage or nil
+			end
 		end
 	end
 end
@@ -749,6 +860,7 @@ function Win:_menu(title, items, pos)
 	end
 end
 
+-- Hold menu: Favourite / Hide (+ Reset for Dropdown)
 function Win:_elementMenu(rec)
 	local items = {
 		{Text = rec.Favourite and "Unfavourite" or "Favourite", Run = function()
@@ -765,17 +877,6 @@ function Win:_elementMenu(rec)
 		table.insert(items, {Text = "Reset Value", Run = function()
 			if rec.Set then rec.Set(rec.Default) end
 		end})
-	else
-		local fl = rec.Floating
-		if not fl then
-			table.insert(items, {Text = rec.Kind == "Slider" and "Floating Slider" or "Floating Button", Run = function()
-				self:_makeFloat(rec)
-			end})
-		elseif fl.Hidden then
-			table.insert(items, {Text = "Show Floating", Run = function() self:_showFloat(rec, true) end})
-		else
-			table.insert(items, {Text = "Remove Floating", Run = function() self:_removeFloat(rec) end})
-		end
 	end
 	local p = rec.Row.AbsolutePosition
 	local s = rec.Row.AbsoluteSize
@@ -785,6 +886,24 @@ end
 -- ============================================================
 --  FLOATING WIDGETS
 -- ============================================================
+function Win:_syncFloat(rec)
+	if not rec.FloatBtn then return end
+	local fl = rec.Floating
+	local on = fl ~= nil and fl.Frame ~= nil and not fl.Hidden
+	bind(rec.FloatBtn, "BackgroundColor3", on and "Accent" or "Off", true)
+end
+
+function Win:_toggleFloat(rec)
+	local fl = rec.Floating
+	if fl and fl.Frame and not fl.Hidden then
+		self:_removeFloat(rec)
+	elseif fl and fl.Frame then
+		self:_showFloat(rec, true)
+	else
+		self:_makeFloat(rec)
+	end
+end
+
 function Win:_makeFloat(rec, x, y)
 	if rec.Floating and rec.Floating.Frame then rec.Floating.Frame:Destroy() end
 	local isSlider = rec.Kind == "Slider"
@@ -827,7 +946,6 @@ function Win:_makeFloat(rec, x, y)
 		barFill = bind(make("Frame", {Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, Parent = bar}), "BackgroundColor3", "Accent")
 		corner(2, barFill)
 
-		-- value adjust: press on the bar area
 		local sliderHit = make("TextButton", {
 			Position = UDim2.fromOffset(0, 16), Size = UDim2.new(1, 0, 0, 18),
 			BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = frame,
@@ -871,7 +989,8 @@ function Win:_makeFloat(rec, x, y)
 		end
 	end)
 
-	table.insert(self.Floats, rec)
+	if not table.find(self.Floats, rec) then table.insert(self.Floats, rec) end
+	self:_syncFloat(rec)
 	return fl
 end
 
@@ -883,13 +1002,14 @@ function Win:_showFloat(rec, show)
 	local w = f.Size.X.Offset
 	if show then
 		f.Visible = true
-		tw(f, 0.35, {Size = UDim2.fromOffset(w, 34)}, Enum.EasingStyle.Back)
+		tw(f, 0.35, {Size = UDim2.fromOffset(w, 34), BackgroundTransparency = 0}, Enum.EasingStyle.Back)
 	else
 		tw(f, 0.25, {Size = UDim2.fromOffset(w, 0), BackgroundTransparency = 1}, Enum.EasingStyle.Quad)
 		task.delay(0.27, function()
 			if fl.Hidden and fl.Frame then fl.Frame.Visible = false end
 		end)
 	end
+	self:_syncFloat(rec)
 end
 
 function Win:_removeFloat(rec)
@@ -900,6 +1020,7 @@ function Win:_removeFloat(rec)
 	for i, r in ipairs(self.Floats) do
 		if r == rec then table.remove(self.Floats, i) break end
 	end
+	self:_syncFloat(rec)
 end
 
 function Win:_floatMenu(rec)
@@ -1012,9 +1133,9 @@ end
 --  CONFIG SYSTEM
 -- ============================================================
 function Win:_snapshot()
-	local data = {version = 1, elements = {}}
+	local data = {version = 2, elements = {}}
 	for _, r in ipairs(self.Elements) do
-		local e = {fav = r.Favourite, hid = r.Hidden}
+		local e = {fav = r.Favourite == true, hid = r.Hidden == true}
 		if r.Get then e.v = r.Get() end
 		if r.Floating then
 			e.fl = {x = r.Floating.X, y = r.Floating.Y, locked = r.Floating.Locked, hidden = r.Floating.Hidden}
@@ -1029,14 +1150,18 @@ function Win:_apply(data)
 	for _, r in ipairs(self.Elements) do
 		local e = els[r.Id]
 		if e then
-			r.Favourite = e.fav == true
-			r.Hidden = e.hid == true
+			if not r.Child then
+				r.Favourite = e.fav == true
+				r.Hidden = e.hid == true
+			end
 			if e.v ~= nil and r.Set then r.Set(e.v) end
-			if r.Floating then self:_removeFloat(r) end
-			if e.fl then
-				self:_makeFloat(r, e.fl.x, e.fl.y)
-				r.Floating.Locked = e.fl.locked == true
-				if e.fl.hidden then self:_showFloat(r, false) end
+			if not r.Child then
+				if r.Floating then self:_removeFloat(r) end
+				if e.fl then
+					self:_makeFloat(r, e.fl.x, e.fl.y)
+					r.Floating.Locked = e.fl.locked == true
+					if e.fl.hidden then self:_showFloat(r, false) end
+				end
 			end
 		end
 	end
@@ -1104,11 +1229,12 @@ function Win:_refreshConfigs()
 	self.EmptyLbl.Visible = #names == 0
 
 	for i, name in ipairs(names) do
-		local row, hit = newRow(self.ConfigTab, 46)
+		local row, hit = newRow(self.ConfigTab.Page, 46)
 		row.LayoutOrder = 10 + i
-		header(row, 46, name, nil, auto == name and 70 or 14)
+		header(row, 46, name, nil, auto == name and 58 or 0)
 		if self.SelectedConfig == name then
-			bind(row:FindFirstChildOfClass("UIStroke"), "Color", "Accent")
+			local st = row:FindFirstChildOfClass("UIStroke")
+			if st then bind(st, "Color", "Accent") end
 		end
 		if auto == name then
 			local tag = make("TextLabel", {
@@ -1232,7 +1358,6 @@ function Nova.CreateWindow(title, opts)
 	self.Gui = make("ScreenGui", {Name = guiName, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 500, Parent = parent})
 	self.FloatGui = make("ScreenGui", {Name = guiName .. "_Float", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 499, Parent = parent})
 
-	-- Main window (CanvasGroup for fade animations)
 	local W, H = opts.Width or 640, opts.Height or 420
 	local Main = make("CanvasGroup", {
 		Name = "Main", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
@@ -1365,25 +1490,33 @@ end
 -- ============================================================
 local Hub = Nova.CreateWindow("Nova Hub", {Key = Enum.KeyCode.RightShift})
 
-local Main = Hub:CreateTab("Main")
-Main:AddButton({
+local Farm = Hub:CreateTab("Farm")
+
+Farm:AddButton({
 	Name = "Say Hello", Description = "Prints a message",
 	Callback = function() print("Hello from NovaUI") end,
 })
-Main:AddToggle({
-	Name = "Auto Farm", Default = false, Description = "Toggle auto farm",
+
+Farm:AddToggle({
+	Name = "Auto Farm", Default = false, Description = "Farms automatically",
 	Callback = function(v) print("Auto Farm:", v) end,
+	Settings = {
+		{Type = "Toggle", Name = "Farm Shop", Default = false,
+			Callback = function(v) print("Farm Shop:", v) end},
+		{Type = "Toggle", Name = "Sell When Complete", Default = true,
+			Callback = function(v) print("Sell When Complete:", v) end},
+		{Type = "Slider", Name = "Farm Radius", Min = 10, Max = 200, Default = 50, Suffix = " studs",
+			Callback = function(v) print("Farm Radius:", v) end},
+	},
 })
-Main:AddSlider({
+
+Farm:AddSlider({
 	Name = "Speed", Min = 16, Max = 100, Default = 16, Increment = 1, Suffix = " studs/s",
 	Callback = function(v) print("Speed:", v) end,
 })
-Main:AddDropdown({
+
+Farm:AddDropdown({
 	Name = "Targets", Options = {"Head", "Torso", "Arms", "Legs", "Random"},
 	Multi = true, Max = 3, Default = {"Head"},
 	Callback = function(v) print("Targets:", table.concat(v, ", ")) end,
-})
-Main:AddDropdown({
-	Name = "Mode", Options = {"Safe", "Fast", "Legit"}, Default = "Safe",
-	Callback = function(v) print("Mode:", v) end,
 })
