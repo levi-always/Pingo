@@ -1,762 +1,744 @@
-local PingoUI = {}
-PingoUI.CurrentTheme = "Ruby"
-PingoUI.Elements = {}
-PingoUI.ThemeObjects = {}
+--[[
+    PingoUI v2.0  |  Orchard-style UI Library
+    -----------------------------------------------------------
+    local Window = PingoUI.CreateWindow("Pingo", "Beta", {Icon = nil, Key = Enum.KeyCode.RightShift})
+
+    local Side = Window:CreateSideTab("Combat", "rbxassetid://...")   -- SideTab (الخانة الأساسية)
+    local Tab  = Side:CreateTab("All")                               -- Tab (خانة داخل الـ SideTab)
+
+    Tab:AddButton("Name", function() end)
+    Tab:AddToggle("Name", false, function(state) end)
+    Tab:AddSlider("Name", min, max, default, function(v) end, increment)
+    Tab:AddTextbox("Name", "placeholder", function(text, enterPressed) end, "default")
+
+    Window:Notify("Title", "Text", 3)
+    Window:Toggle()      -- فتح / إغلاق
+    Window:Destroy()
+    خانة Themes موجودة تلقائياً بأسفل الـ Sidebar
+]]
+
+local PingoUI = {Version = "2.0"}
 
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
-PingoUI.Themes = {
-    Ruby = {Accent = Color3.fromRGB(255, 59, 83), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Tangerine = {Accent = Color3.fromRGB(255, 130, 37), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Sun = {Accent = Color3.fromRGB(255, 215, 0), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Lime = {Accent = Color3.fromRGB(160, 235, 60), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Emerald = {Accent = Color3.fromRGB(46, 204, 113), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Cyan = {Accent = Color3.fromRGB(0, 210, 255), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Azure = {Accent = Color3.fromRGB(50, 150, 255), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Violet = {Accent = Color3.fromRGB(180, 80, 255), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Magenta = {Accent = Color3.fromRGB(255, 80, 180), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Orchid = {Accent = Color3.fromRGB(218, 112, 214), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Gurple = {Accent = Color3.fromRGB(120, 100, 255), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Grape = {Accent = Color3.fromRGB(150, 50, 200), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Moon = {Accent = Color3.fromRGB(100, 180, 255), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Sunset = {Accent = Color3.fromRGB(255, 100, 100), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Ocean = {Accent = Color3.fromRGB(0, 150, 200), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Aurora = {Accent = Color3.fromRGB(100, 255, 200), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Mono = {Accent = Color3.fromRGB(200, 200, 200), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Dark = {Accent = Color3.fromRGB(80, 80, 95), Background = Color3.fromRGB(14, 14, 18), Sidebar = Color3.fromRGB(20, 20, 25), Card = Color3.fromRGB(26, 26, 32), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Blood = {Accent = Color3.fromRGB(180, 0, 40), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)},
-    Mint = {Accent = Color3.fromRGB(150, 255, 200), Background = Color3.fromRGB(18, 19, 24), Sidebar = Color3.fromRGB(24, 25, 31), Card = Color3.fromRGB(32, 34, 42), Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 145, 160)}
+-- ============================================================
+--  HELPERS
+-- ============================================================
+local function rgb(r, g, b) return Color3.fromRGB(r, g, b) end
+
+local function tw(obj, t, props, style, dir)
+	if not obj then return end
+	local tween = TweenService:Create(obj, TweenInfo.new(t or 0.2, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out), props)
+	tween:Play()
+	return tween
+end
+
+local function new(class, props, children)
+	local o = Instance.new(class)
+	local parent
+	for k, v in pairs(props or {}) do
+		if k == "Parent" then parent = v else o[k] = v end
+	end
+	for _, c in ipairs(children or {}) do c.Parent = o end
+	if parent then o.Parent = parent end
+	return o
+end
+
+local function corner(r) return new("UICorner", {CornerRadius = UDim.new(0, r)}) end
+
+local function icon(i)
+	if not i then return nil end
+	if type(i) == "number" then return "rbxassetid://" .. i end
+	if tostring(i):match("^%d+$") then return "rbxassetid://" .. i end
+	return tostring(i)
+end
+
+-- ============================================================
+--  THEMES
+-- ============================================================
+local BASE = {
+	Background = rgb(18, 19, 24), Sidebar = rgb(24, 25, 31), Card = rgb(32, 34, 42),
+	Off = rgb(55, 58, 70), Text = rgb(240, 240, 245), SubText = rgb(140, 145, 160),
+	White = rgb(255, 255, 255), Stroke = rgb(44, 46, 58),
 }
 
-local function RegisterThemeObject(guiObject, propertyName, themeKey)
-    table.insert(PingoUI.ThemeObjects, {Object = guiObject, Property = propertyName, Key = themeKey})
-    local activeTheme = PingoUI.Themes[PingoUI.CurrentTheme]
-    if activeTheme and activeTheme[themeKey] then
-        guiObject[propertyName] = activeTheme[themeKey]
-    end
+local THEME_LIST = {
+	{"Ruby", "Red", rgb(255, 59, 83), rgb(255, 110, 80)},
+	{"Magenta", "Red", rgb(255, 70, 180), rgb(255, 95, 110)},
+	{"Tangerine", "Yellow", rgb(255, 130, 37), rgb(255, 190, 60)},
+	{"Sun", "Yellow", rgb(240, 225, 50), rgb(190, 255, 70)},
+	{"Sunset", "Yellow", rgb(255, 115, 90), rgb(255, 160, 20)},
+	{"Lime", "Green", rgb(110, 255, 70), rgb(50, 230, 140)},
+	{"Emerald", "Green", rgb(46, 220, 130), rgb(30, 200, 200)},
+	{"Aurora", "Green", rgb(110, 255, 190), rgb(150, 110, 255)},
+	{"Cyan", "Blue", rgb(40, 230, 255), rgb(60, 150, 255)},
+	{"Azure", "Blue", rgb(60, 130, 255), rgb(90, 210, 255)},
+	{"Ocean", "Blue", rgb(0, 190, 210), rgb(40, 110, 255)},
+	{"Neon", "Blue", rgb(0, 235, 255), rgb(220, 70, 220)},
+	{"Violet", "Purple", rgb(190, 80, 255), rgb(255, 90, 200)},
+	{"Orchid", "Purple", rgb(165, 130, 230), rgb(120, 140, 255)},
+	{"Gurple", "Purple", rgb(140, 60, 235), rgb(60, 120, 255)},
+	{"Grape", "Purple", rgb(160, 90, 255), rgb(225, 90, 255)},
+	{"Mono", "Mono", rgb(200, 200, 205), rgb(120, 122, 130)},
+}
+local THEME_GROUPS = {"All", "Red", "Yellow", "Green", "Blue", "Purple", "Mono"}
+
+local THEMES = {}
+for _, t in ipairs(THEME_LIST) do
+	local d = {Group = t[2], Accent = t[3], Accent2 = t[4]}
+	for k, v in pairs(BASE) do d[k] = v end
+	THEMES[t[1]] = d
 end
 
-function PingoUI:SetTheme(themeName)
-    if not PingoUI.Themes[themeName] then return end
-    PingoUI.CurrentTheme = themeName
-    local activeTheme = PingoUI.Themes[themeName]
-    for _, item in ipairs(PingoUI.ThemeObjects) do
-        if item.Object and item.Object.Parent and activeTheme[item.Key] then
-            TweenService:Create(item.Object, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {[item.Property] = activeTheme[item.Key]}):Play()
-        end
-    end
+local currentTheme = "Ruby"
+local function T(key) return THEMES[currentTheme][key] end
+
+local bindings = setmetatable({}, {__mode = "k"})
+local gradients = setmetatable({}, {__mode = "k"})
+local ringRefreshers = {}
+
+local function bind(obj, prop, key, animate)
+	local b = bindings[obj]
+	if not b then b = {}; bindings[obj] = b end
+	b[prop] = key
+	if animate then tw(obj, 0.2, {[prop] = T(key)}) else obj[prop] = T(key) end
 end
 
-function PingoUI.CreateWindow(titleName, versionName)
-    titleName = titleName or "PingoUI"
-    versionName = versionName or "v1.0.0"
-
-    local parentTarget = (gethui and gethui()) or CoreGui or Players.LocalPlayer:WaitForChild("PlayerGui")
-    for _, oldGui in ipairs(parentTarget:GetChildren()) do
-        if oldGui.Name == "PingoUI_Container" then
-            oldGui:Destroy()
-        end
-    end
-
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "PingoUI_Container"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = parentTarget
-
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 780, 0, 480)
-    MainFrame.Position = UDim2.new(0.5, -390, 0.5, -240)
-    MainFrame.ClipsDescendants = true
-    MainFrame.Parent = ScreenGui
-    RegisterThemeObject(MainFrame, "BackgroundColor3", "Background")
-
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 12)
-    MainCorner.Parent = MainFrame
-
-    local Sidebar = Instance.new("Frame")
-    Sidebar.Name = "Sidebar"
-    Sidebar.Size = UDim2.new(0, 180, 1, 0)
-    Sidebar.Position = UDim2.new(0, 0, 0, 0)
-    Sidebar.Parent = MainFrame
-    RegisterThemeObject(Sidebar, "BackgroundColor3", "Sidebar")
-
-    local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Name = "TitleLabel"
-    TitleLabel.Size = UDim2.new(0, 100, 0, 30)
-    TitleLabel.Position = UDim2.new(0, 16, 0, 16)
-    TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.Text = titleName
-    TitleLabel.TextSize = 20
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Parent = Sidebar
-    RegisterThemeObject(TitleLabel, "TextColor3", "Accent")
-
-    local VersionLabel = Instance.new("TextLabel")
-    VersionLabel.Name = "VersionLabel"
-    VersionLabel.Size = UDim2.new(0, 50, 0, 20)
-    VersionLabel.Position = UDim2.new(0, TitleLabel.TextBounds.X + 22, 0, 23)
-    VersionLabel.Font = Enum.Font.Gotham
-    VersionLabel.Text = versionName
-    VersionLabel.TextSize = 11
-    VersionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    VersionLabel.BackgroundTransparency = 1
-    VersionLabel.Parent = Sidebar
-    RegisterThemeObject(VersionLabel, "TextColor3", "SubText")
-
-    TitleLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
-        VersionLabel.Position = UDim2.new(0, TitleLabel.TextBounds.X + 22, 0, 23)
-    end)
-
-    local SideTabHolder = Instance.new("ScrollingFrame")
-    SideTabHolder.Name = "SideTabHolder"
-    SideTabHolder.Size = UDim2.new(1, 0, 1, -60)
-    SideTabHolder.Position = UDim2.new(0, 0, 0, 55)
-    SideTabHolder.BackgroundTransparency = 1
-    SideTabHolder.ScrollBarThickness = 0
-    SideTabHolder.Parent = Sidebar
-
-    local SideTabList = Instance.new("UIListLayout")
-    SideTabList.SortOrder = Enum.SortOrder.LayoutOrder
-    SideTabList.Padding = UDim.new(0, 4)
-    SideTabList.Parent = SideTabHolder
-
-    local SideTabPadding = Instance.new("UIPadding")
-    SideTabPadding.PaddingLeft = UDim.new(0, 10)
-    SideTabPadding.PaddingRight = UDim.new(0, 10)
-    SideTabPadding.Parent = SideTabHolder
-
-    local ContentArea = Instance.new("Frame")
-    ContentArea.Name = "ContentArea"
-    ContentArea.Size = UDim2.new(1, -180, 1, 0)
-    ContentArea.Position = UDim2.new(0, 180, 0, 0)
-    ContentArea.BackgroundTransparency = 1
-    ContentArea.Parent = MainFrame
-
-    local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
-    TopBar.Size = UDim2.new(1, -32, 0, 40)
-    TopBar.Position = UDim2.new(0, 16, 0, 12)
-    TopBar.BackgroundTransparency = 1
-    TopBar.Parent = ContentArea
-
-    local SearchBoxFrame = Instance.new("Frame")
-    SearchBoxFrame.Name = "SearchBoxFrame"
-    SearchBoxFrame.Size = UDim2.new(1, 0, 1, 0)
-    SearchBoxFrame.Parent = TopBar
-    RegisterThemeObject(SearchBoxFrame, "BackgroundColor3", "Sidebar")
-
-    local SearchCorner = Instance.new("UICorner")
-    SearchCorner.CornerRadius = UDim.new(0, 8)
-    SearchCorner.Parent = SearchBoxFrame
-
-    local SearchIcon = Instance.new("ImageLabel")
-    SearchIcon.Size = UDim2.new(0, 16, 0, 16)
-    SearchIcon.Position = UDim2.new(0, 12, 0.5, -8)
-    SearchIcon.Image = "rbxassetid://6031154871"
-    SearchIcon.BackgroundTransparency = 1
-    SearchIcon.Parent = SearchBoxFrame
-    RegisterThemeObject(SearchIcon, "ImageColor3", "SubText")
-
-    local SearchInput = Instance.new("TextBox")
-    SearchInput.Size = UDim2.new(1, -40, 1, 0)
-    SearchInput.Position = UDim2.new(0, 36, 0, 0)
-    SearchInput.Font = Enum.Font.Gotham
-    SearchInput.PlaceholderText = "Search"
-    SearchInput.Text = ""
-    SearchInput.TextSize = 13
-    SearchInput.TextXAlignment = Enum.TextXAlignment.Left
-    SearchInput.BackgroundTransparency = 1
-    SearchInput.Parent = SearchBoxFrame
-    RegisterThemeObject(SearchInput, "TextColor3", "Text")
-    RegisterThemeObject(SearchInput, "PlaceholderColor3", "SubText")
-
-    local SubTabContainer = Instance.new("Frame")
-    SubTabContainer.Name = "SubTabContainer"
-    SubTabContainer.Size = UDim2.new(1, -32, 0, 30)
-    SubTabContainer.Position = UDim2.new(0, 16, 0, 60)
-    SubTabContainer.BackgroundTransparency = 1
-    SubTabContainer.Parent = ContentArea
-
-    local SubTabList = Instance.new("UIListLayout")
-    SubTabList.FillDirection = Enum.FillDirection.Horizontal
-    SubTabList.SortOrder = Enum.SortOrder.LayoutOrder
-    SubTabList.Padding = UDim.new(0, 8)
-    SubTabList.Parent = SubTabContainer
-
-    local PagesFolder = Instance.new("Folder")
-    PagesFolder.Name = "PagesFolder"
-    PagesFolder.Parent = ContentArea
-
-    local SearchResultsPage = Instance.new("ScrollingFrame")
-    SearchResultsPage.Name = "SearchResultsPage"
-    SearchResultsPage.Size = UDim2.new(1, -32, 1, -105)
-    SearchResultsPage.Position = UDim2.new(0, 16, 0, 98)
-    SearchResultsPage.BackgroundTransparency = 1
-    SearchResultsPage.ScrollBarThickness = 2
-    SearchResultsPage.Visible = false
-    SearchResultsPage.Parent = ContentArea
-
-    local SearchGrid = Instance.new("UIGridLayout")
-    SearchGrid.CellSize = UDim2.new(0.5, -6, 0, 50)
-    SearchGrid.CellPadding = UDim2.new(0, 12, 0, 10)
-    SearchGrid.SortOrder = Enum.SortOrder.LayoutOrder
-    SearchGrid.Parent = SearchResultsPage
-
-    local WindowObj = {
-        SideTabs = {},
-        ActiveSideTab = nil,
-        ActiveSubTab = nil,
-        PagesFolder = PagesFolder,
-        SubTabContainer = SubTabContainer,
-        ScreenGui = ScreenGui
-    }
-
-    local function PerformSearch(query)
-        query = string.lower(query)
-        if query == "" then
-            SearchResultsPage.Visible = false
-            if WindowObj.ActiveSubTab and WindowObj.ActiveSubTab.PageFrame then
-                WindowObj.ActiveSubTab.PageFrame.Visible = true
-            end
-            SubTabContainer.Visible = true
-            return
-        end
-
-        SubTabContainer.Visible = false
-        for _, page in ipairs(PagesFolder:GetChildren()) do
-            page.Visible = false
-        end
-        SearchResultsPage.Visible = true
-
-        for _, child in ipairs(SearchResultsPage:GetChildren()) do
-            if child:IsA("Frame") then
-                child.Parent = child:GetAttribute("OriginalParent")
-            end
-        end
-
-        for _, elemData in ipairs(PingoUI.Elements) do
-            local nameLower = string.lower(elemData.Name)
-            if string.find(nameLower, query) then
-                elemData.Frame.Parent = SearchResultsPage
-            end
-        end
-    end
-
-    SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-        PerformSearch(SearchInput.Text)
-    end)
-
-    local dragging, dragInput, dragStart, startPos
-    TopBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    TopBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    function WindowObj:CreateSideTab(sideTabName, iconAssetId)
-        local SideTabBtn = Instance.new("TextButton")
-        SideTabBtn.Size = UDim2.new(1, 0, 0, 36)
-        SideTabBtn.Text = ""
-        SideTabBtn.AutoButtonColor = false
-        SideTabBtn.BackgroundTransparency = 1
-        SideTabBtn.Parent = SideTabHolder
-
-        local SideTabCorner = Instance.new("UICorner")
-        SideTabCorner.CornerRadius = UDim.new(0, 8)
-        SideTabCorner.Parent = SideTabBtn
-
-        local IconImg = Instance.new("ImageLabel")
-        IconImg.Size = UDim2.new(0, 18, 0, 18)
-        IconImg.Position = UDim2.new(0, 10, 0.5, -9)
-        IconImg.BackgroundTransparency = 1
-        IconImg.Parent = SideTabBtn
-        RegisterThemeObject(IconImg, "ImageColor3", "SubText")
-
-        if iconAssetId and iconAssetId ~= "" then
-            IconImg.Image = iconAssetId
-        else
-            IconImg.Visible = false
-        end
-
-        local SideTabText = Instance.new("TextLabel")
-        SideTabText.Size = UDim2.new(1, iconAssetId and -38 or -20, 1, 0)
-        SideTabText.Position = UDim2.new(0, iconAssetId and 34 or 10, 0, 0)
-        SideTabText.Font = Enum.Font.GothamMedium
-        SideTabText.Text = sideTabName
-        SideTabText.TextSize = 13
-        SideTabText.TextXAlignment = Enum.TextXAlignment.Left
-        SideTabText.BackgroundTransparency = 1
-        SideTabText.Parent = SideTabBtn
-        RegisterThemeObject(SideTabText, "TextColor3", "SubText")
-
-        local SideTabObj = {
-            Name = sideTabName,
-            Button = SideTabBtn,
-            SubTabs = {},
-            ActiveSubTab = nil
-        }
-
-        function SideTabObj:CreateTab(tabName)
-            local SubTabBtn = Instance.new("TextButton")
-            SubTabBtn.Size = UDim2.new(0, 75, 1, 0)
-            SubTabBtn.Text = tabName
-            SubTabBtn.Font = Enum.Font.GothamMedium
-            SubTabBtn.TextSize = 12
-            SubTabBtn.AutoButtonColor = false
-            SubTabBtn.BackgroundTransparency = 1
-            SubTabBtn.Parent = SubTabContainer
-            RegisterThemeObject(SubTabBtn, "TextColor3", "SubText")
-
-            local SubTabCorner = Instance.new("UICorner")
-            SubTabCorner.CornerRadius = UDim.new(0, 6)
-            SubTabCorner.Parent = SubTabBtn
-
-            local PageFrame = Instance.new("ScrollingFrame")
-            PageFrame.Name = sideTabName .. "_" .. tabName .. "_Page"
-            PageFrame.Size = UDim2.new(1, -32, 1, -105)
-            PageFrame.Position = UDim2.new(0, 16, 0, 98)
-            PageFrame.BackgroundTransparency = 1
-            PageFrame.ScrollBarThickness = 2
-            PageFrame.Visible = false
-            PageFrame.Parent = PagesFolder
-
-            local Grid = Instance.new("UIGridLayout")
-            Grid.CellSize = UDim2.new(0.5, -6, 0, 52)
-            Grid.CellPadding = UDim2.new(0, 12, 0, 10)
-            Grid.SortOrder = Enum.SortOrder.LayoutOrder
-            Grid.Parent = PageFrame
-
-            local TabObj = {
-                Name = tabName,
-                Button = SubTabBtn,
-                PageFrame = PageFrame,
-                SideTab = SideTabObj
-            }
-
-            local function ActivateTab()
-                for _, sTab in ipairs(WindowObj.SideTabs) do
-                    for _, tObj in ipairs(sTab.SubTabs) do
-                        tObj.PageFrame.Visible = false
-                        TweenService:Create(tObj.Button, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-                        RegisterThemeObject(tObj.Button, "TextColor3", "SubText")
-                    end
-                end
-
-                WindowObj.ActiveSideTab = SideTabObj
-                SideTabObj.ActiveSubTab = TabObj
-                WindowObj.ActiveSubTab = TabObj
-
-                PageFrame.Visible = true
-                RegisterThemeObject(SubTabBtn, "BackgroundColor3", "Card")
-                TweenService:Create(SubTabBtn, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
-                RegisterThemeObject(SubTabBtn, "TextColor3", "Text")
-            end
-
-            SubTabBtn.MouseButton1Click:Connect(function()
-                if SearchInput.Text ~= "" then SearchInput.Text = "" end
-                ActivateTab()
-            end)
-
-            function TabObj:AddButton(btnText, callback)
-                local Card = Instance.new("Frame")
-                Card.Parent = PageFrame
-                Card.Attribute = btnText
-                Card:SetAttribute("OriginalParent", PageFrame)
-                RegisterThemeObject(Card, "BackgroundColor3", "Card")
-
-                local CardCorner = Instance.new("UICorner")
-                CardCorner.CornerRadius = UDim.new(0, 8)
-                CardCorner.Parent = Card
-
-                local TagLabel = Instance.new("TextLabel")
-                TagLabel.Size = UDim2.new(1, -20, 0, 12)
-                TagLabel.Position = UDim2.new(0, 10, 0, 6)
-                TagLabel.Font = Enum.Font.GothamBold
-                TagLabel.Text = string.upper(sideTabName)
-                TagLabel.TextSize = 9
-                TagLabel.TextXAlignment = Enum.TextXAlignment.Left
-                TagLabel.BackgroundTransparency = 1
-                TagLabel.Parent = Card
-                RegisterThemeObject(TagLabel, "TextColor3", "SubText")
-
-                local ActionBtn = Instance.new("TextButton")
-                ActionBtn.Size = UDim2.new(1, 0, 1, -18)
-                ActionBtn.Position = UDim2.new(0, 0, 0, 18)
-                ActionBtn.Text = btnText
-                ActionBtn.Font = Enum.Font.GothamBold
-                ActionBtn.TextSize = 13
-                ActionBtn.TextXAlignment = Enum.TextXAlignment.Left
-                ActionBtn.BackgroundTransparency = 1
-                ActionBtn.Parent = Card
-                RegisterThemeObject(ActionBtn, "TextColor3", "Text")
-
-                local Padding = Instance.new("UIPadding")
-                Padding.PaddingLeft = UDim.new(0, 10)
-                Padding.Parent = ActionBtn
-
-                ActionBtn.MouseButton1Down:Connect(function()
-                    TweenService:Create(Card, TweenInfo.new(0.1), {Size = UDim2.new(Card.Size.X.Scale, Card.Size.X.Offset - 2, Card.Size.Y.Scale, Card.Size.Y.Offset - 2)}):Play()
-                end)
-
-                ActionBtn.MouseButton1Up:Connect(function()
-                    TweenService:Create(Card, TweenInfo.new(0.1), {Size = UDim2.new(Card.Size.X.Scale, Card.Size.X.Offset, Card.Size.Y.Scale, Card.Size.Y.Offset)}):Play()
-                end)
-
-                ActionBtn.MouseButton1Click:Connect(function()
-                    if callback then callback() end
-                end)
-
-                table.insert(PingoUI.Elements, {Name = btnText, Frame = Card})
-            end
-
-            function TabObj:AddToggle(toggleText, defaultState, callback)
-                local state = defaultState or false
-
-                local Card = Instance.new("Frame")
-                Card.Parent = PageFrame
-                Card:SetAttribute("OriginalParent", PageFrame)
-                RegisterThemeObject(Card, "BackgroundColor3", "Card")
-
-                local CardCorner = Instance.new("UICorner")
-                CardCorner.CornerRadius = UDim.new(0, 8)
-                CardCorner.Parent = Card
-
-                local TagLabel = Instance.new("TextLabel")
-                TagLabel.Size = UDim2.new(1, -20, 0, 12)
-                TagLabel.Position = UDim2.new(0, 10, 0, 6)
-                TagLabel.Font = Enum.Font.GothamBold
-                TagLabel.Text = string.upper(sideTabName)
-                TagLabel.TextSize = 9
-                TagLabel.TextXAlignment = Enum.TextXAlignment.Left
-                TagLabel.BackgroundTransparency = 1
-                TagLabel.Parent = Card
-                RegisterThemeObject(TagLabel, "TextColor3", "SubText")
-
-                local TitleLabel = Instance.new("TextLabel")
-                TitleLabel.Size = UDim2.new(1, -50, 0, 20)
-                TitleLabel.Position = UDim2.new(0, 10, 0, 22)
-                TitleLabel.Font = Enum.Font.GothamBold
-                TitleLabel.Text = toggleText
-                TitleLabel.TextSize = 13
-                TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-                TitleLabel.BackgroundTransparency = 1
-                TitleLabel.Parent = Card
-                RegisterThemeObject(TitleLabel, "TextColor3", "Text")
-
-                local SwitchFrame = Instance.new("Frame")
-                SwitchFrame.Size = UDim2.new(0, 34, 0, 18)
-                SwitchFrame.Position = UDim2.new(1, -44, 0.5, -9)
-                SwitchFrame.Parent = Card
-                RegisterThemeObject(SwitchFrame, "BackgroundColor3", "Sidebar")
-
-                local SwitchCorner = Instance.new("UICorner")
-                SwitchCorner.CornerRadius = UDim.new(1, 0)
-                SwitchCorner.Parent = SwitchFrame
-
-                local Knob = Instance.new("Frame")
-                Knob.Size = UDim2.new(0, 14, 0, 14)
-                Knob.Position = state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-                Knob.Parent = SwitchFrame
-                RegisterThemeObject(Knob, "BackgroundColor3", "Text")
-
-                local KnobCorner = Instance.new("UICorner")
-                KnobCorner.CornerRadius = UDim.new(1, 0)
-                KnobCorner.Parent = Knob
-
-                local ClickArea = Instance.new("TextButton")
-                ClickArea.Size = UDim2.new(1, 0, 1, 0)
-                ClickArea.Text = ""
-                ClickArea.BackgroundTransparency = 1
-                ClickArea.Parent = Card
-
-                local function UpdateToggle()
-                    if state then
-                        RegisterThemeObject(SwitchFrame, "BackgroundColor3", "Accent")
-                        TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -16, 0.5, -7)}):Play()
-                    else
-                        RegisterThemeObject(SwitchFrame, "BackgroundColor3", "Sidebar")
-                        TweenService:Create(Knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -7)}):Play()
-                    end
-                    if callback then callback(state) end
-                end
-
-                ClickArea.MouseButton1Click:Connect(function()
-                    state = not state
-                    UpdateToggle()
-                end)
-
-                if state then UpdateToggle() end
-                table.insert(PingoUI.Elements, {Name = toggleText, Frame = Card})
-            end
-
-            function TabObj:AddTextbox(boxText, placeholder, callback)
-                local Card = Instance.new("Frame")
-                Card.Parent = PageFrame
-                Card:SetAttribute("OriginalParent", PageFrame)
-                RegisterThemeObject(Card, "BackgroundColor3", "Card")
-
-                local CardCorner = Instance.new("UICorner")
-                CardCorner.CornerRadius = UDim.new(0, 8)
-                CardCorner.Parent = Card
-
-                local TitleLabel = Instance.new("TextLabel")
-                TitleLabel.Size = UDim2.new(0.45, -10, 1, 0)
-                TitleLabel.Position = UDim2.new(0, 10, 0, 0)
-                TitleLabel.Font = Enum.Font.GothamBold
-                TitleLabel.Text = boxText
-                TitleLabel.TextSize = 12
-                TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-                TitleLabel.BackgroundTransparency = 1
-                TitleLabel.Parent = Card
-                RegisterThemeObject(TitleLabel, "TextColor3", "Text")
-
-                local InputBoxFrame = Instance.new("Frame")
-                InputBoxFrame.Size = UDim2.new(0.5, 0, 0, 26)
-                InputBoxFrame.Position = UDim2.new(0.48, 0, 0.5, -13)
-                InputBoxFrame.Parent = Card
-                RegisterThemeObject(InputBoxFrame, "BackgroundColor3", "Sidebar")
-
-                local BoxCorner = Instance.new("UICorner")
-                BoxCorner.CornerRadius = UDim.new(0, 6)
-                BoxCorner.Parent = InputBoxFrame
-
-                local BoxInput = Instance.new("TextBox")
-                BoxInput.Size = UDim2.new(1, -12, 1, 0)
-                BoxInput.Position = UDim2.new(0, 6, 0, 0)
-                BoxInput.Font = Enum.Font.Gotham
-                BoxInput.PlaceholderText = placeholder or "Type..."
-                BoxInput.Text = ""
-                BoxInput.TextSize = 11
-                BoxInput.TextXAlignment = Enum.TextXAlignment.Left
-                BoxInput.BackgroundTransparency = 1
-                BoxInput.Parent = InputBoxFrame
-                RegisterThemeObject(BoxInput, "TextColor3", "Text")
-                RegisterThemeObject(BoxInput, "PlaceholderColor3", "SubText")
-
-                BoxInput.FocusLost:Connect(function(enterPressed)
-                    if callback then callback(BoxInput.Text, enterPressed) end
-                end)
-
-                table.insert(PingoUI.Elements, {Name = boxText, Frame = Card})
-            end
-
-            function TabObj:AddSlider(sliderText, min, max, default, callback)
-                min = min or 0
-                max = max or 100
-                default = default or min
-                local val = math.clamp(default, min, max)
-
-                local Card = Instance.new("Frame")
-                Card.Parent = PageFrame
-                Card:SetAttribute("OriginalParent", PageFrame)
-                RegisterThemeObject(Card, "BackgroundColor3", "Card")
-
-                local CardCorner = Instance.new("UICorner")
-                CardCorner.CornerRadius = UDim.new(0, 8)
-                CardCorner.Parent = Card
-
-                local TitleLabel = Instance.new("TextLabel")
-                TitleLabel.Size = UDim2.new(1, -50, 0, 16)
-                TitleLabel.Position = UDim2.new(0, 10, 0, 6)
-                TitleLabel.Font = Enum.Font.GothamBold
-                TitleLabel.Text = sliderText
-                TitleLabel.TextSize = 12
-                TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-                TitleLabel.BackgroundTransparency = 1
-                TitleLabel.Parent = Card
-                RegisterThemeObject(TitleLabel, "TextColor3", "Text")
-
-                local ValLabel = Instance.new("TextLabel")
-                ValLabel.Size = UDim2.new(0, 40, 0, 16)
-                ValLabel.Position = UDim2.new(1, -45, 0, 6)
-                ValLabel.Font = Enum.Font.Gotham
-                ValLabel.Text = tostring(val)
-                ValLabel.TextSize = 11
-                ValLabel.TextXAlignment = Enum.TextXAlignment.Right
-                ValLabel.BackgroundTransparency = 1
-                ValLabel.Parent = Card
-                RegisterThemeObject(ValLabel, "TextColor3", "SubText")
-
-                local Track = Instance.new("Frame")
-                Track.Size = UDim2.new(1, -20, 0, 6)
-                Track.Position = UDim2.new(0, 10, 1, -14)
-                Track.Parent = Card
-                RegisterThemeObject(Track, "BackgroundColor3", "Sidebar")
-
-                local TrackCorner = Instance.new("UICorner")
-                TrackCorner.CornerRadius = UDim.new(1, 0)
-                TrackCorner.Parent = Track
-
-                local Fill = Instance.new("Frame")
-                Fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
-                Fill.Parent = Track
-                RegisterThemeObject(Fill, "BackgroundColor3", "Accent")
-
-                local FillCorner = Instance.new("UICorner")
-                FillCorner.CornerRadius = UDim.new(1, 0)
-                FillCorner.Parent = Fill
-
-                local Knob = Instance.new("Frame")
-                Knob.Size = UDim2.new(0, 12, 0, 12)
-                Knob.Position = UDim2.new(1, -6, 0.5, -6)
-                Knob.Parent = Fill
-                RegisterThemeObject(Knob, "BackgroundColor3", "Text")
-
-                local KnobCorner = Instance.new("UICorner")
-                KnobCorner.CornerRadius = UDim.new(1, 0)
-                KnobCorner.Parent = Knob
-
-                local draggingSlider = false
-                local function UpdateSlider(input)
-                    local percent = math.clamp((input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
-                    val = math.floor(min + (max - min) * percent)
-                    ValLabel.Text = tostring(val)
-                    TweenService:Create(Fill, TweenInfo.new(0.05), {Size = UDim2.new(percent, 0, 1, 0)}):Play()
-                    if callback then callback(val) end
-                end
-
-                Track.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        draggingSlider = true
-                        UpdateSlider(input)
-                    end
-                end)
-
-                UserInputService.InputChanged:Connect(function(input)
-                    if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        UpdateSlider(input)
-                    end
-                end)
-
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        draggingSlider = false
-                    end
-                end)
-
-                table.insert(PingoUI.Elements, {Name = sliderText, Frame = Card})
-            end
-
-            table.insert(SideTabObj.SubTabs, TabObj)
-            if #SideTabObj.SubTabs == 1 and WindowObj.ActiveSideTab == SideTabObj then
-                ActivateTab()
-            end
-            return TabObj
-        end
-
-        SideTabBtn.MouseButton1Click:Connect(function()
-            for _, sTab in ipairs(WindowObj.SideTabs) do
-                sTab.Button.BackgroundTransparency = 1
-                RegisterThemeObject(sTab.Button:FindFirstChildOfClass("TextLabel"), "TextColor3", "SubText")
-                local icon = sTab.Button:FindFirstChildOfClass("ImageLabel")
-                if icon then RegisterThemeObject(icon, "ImageColor3", "SubText") end
-            end
-
-            RegisterThemeObject(SideTabBtn, "BackgroundColor3", "Card")
-            SideTabBtn.BackgroundTransparency = 0
-            RegisterThemeObject(SideTabText, "TextColor3", "Accent")
-            if IconImg.Visible then RegisterThemeObject(IconImg, "ImageColor3", "Accent") end
-
-            for _, child in ipairs(SubTabContainer:GetChildren()) do
-                if child:IsA("TextButton") then child.Visible = false end
-            end
-
-            for _, sub in ipairs(SideTabObj.SubTabs) do
-                sub.Button.Visible = true
-            end
-
-            if #SideTabObj.SubTabs > 0 then
-                SideTabObj.SubTabs[1].Button.MouseButton1Click:Fire()
-            end
-        end)
-
-        table.insert(WindowObj.SideTabs, SideTabObj)
-        if #WindowObj.SideTabs == 1 then
-            SideTabBtn.MouseButton1Click:Fire()
-        end
-
-        return SideTabObj
-    end
-
-    local ThemesSideTab = WindowObj:CreateSideTab("Themes", "rbxassetid://6031265976")
-    local ThemesSubTab = ThemesSideTab:CreateTab("All")
-
-    local ThemeNamesList = {}
-    for name, _ in pairs(PingoUI.Themes) do
-        table.insert(ThemeNamesList, name)
-    end
-    table.sort(ThemeNamesList)
-
-    for _, themeName in ipairs(ThemeNamesList) do
-        local themeData = PingoUI.Themes[themeName]
-        local ThemeCard = Instance.new("Frame")
-        ThemeCard.Parent = ThemesSubTab.PageFrame
-        ThemeCard:SetAttribute("OriginalParent", ThemesSubTab.PageFrame)
-        ThemeCard.BackgroundColor3 = themeData.Card
-
-        local CardCorner = Instance.new("UICorner")
-        CardCorner.CornerRadius = UDim.new(0, 8)
-        CardCorner.Parent = ThemeCard
-
-        local ColorPreview = Instance.new("Frame")
-        ColorPreview.Size = UDim2.new(1, 0, 1, -18)
-        ColorPreview.BackgroundColor3 = themeData.Accent
-        ColorPreview.Parent = ThemeCard
-
-        local PreviewCorner = Instance.new("UICorner")
-        PreviewCorner.CornerRadius = UDim.new(0, 8)
-        PreviewCorner.Parent = ColorPreview
-
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(1, 0, 0, 18)
-        NameLabel.Position = UDim2.new(0, 0, 1, -18)
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.Text = themeName
-        NameLabel.TextSize = 11
-        NameLabel.TextColor3 = themeData.Text
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Parent = ThemeCard
-
-        local ThemeClick = Instance.new("TextButton")
-        ThemeClick.Size = UDim2.new(1, 0, 1, 0)
-        ThemeClick.Text = ""
-        ThemeClick.BackgroundTransparency = 1
-        ThemeClick.Parent = ThemeCard
-
-        ThemeClick.MouseButton1Click:Connect(function()
-            PingoUI:SetTheme(themeName)
-        end)
-
-        table.insert(PingoUI.Elements, {Name = themeName, Frame = ThemeCard})
-    end
-
-    return WindowObj
+local function grad(g)
+	gradients[g] = true
+	g.Color = ColorSequence.new(T("Accent"), T("Accent2"))
+end
+
+function PingoUI.SetTheme(name)
+	if not THEMES[name] then return end
+	currentTheme = name
+	for obj, b in pairs(bindings) do
+		if obj.Parent then
+			for prop, key in pairs(b) do tw(obj, 0.3, {[prop] = T(key)}) end
+		end
+	end
+	for g in pairs(gradients) do
+		if g.Parent then g.Color = ColorSequence.new(T("Accent"), T("Accent2")) end
+	end
+	for _, fn in pairs(ringRefreshers) do fn() end
+end
+
+local function mkText(class, props, key)
+	props.BackgroundTransparency = props.BackgroundTransparency or 1
+	props.BorderSizePixel = 0
+	props.Font = props.Font or Enum.Font.GothamMedium
+	local o = new(class, props)
+	bind(o, "TextColor3", key or "Text")
+	return o
+end
+
+local function candidates()
+	local list = {}
+	if gethui then pcall(function() table.insert(list, gethui()) end) end
+	pcall(function() table.insert(list, game:GetService("CoreGui")) end)
+	local lp = Players.LocalPlayer
+	if lp then table.insert(list, lp:WaitForChild("PlayerGui")) end
+	return list
+end
+
+-- ============================================================
+--  WINDOW
+-- ============================================================
+function PingoUI.CreateWindow(title, version, config)
+	config = config or {}
+	title = title or "Pingo"
+	version = version or "Beta"
+	local W, H = config.Width or 660, config.Height or 420
+	local win = {SideTabs = {}, Elements = {}, Conns = {}, Counter = 0, Opened = false, SearchText = ""}
+
+	local function A(signal, fn)
+		local c = signal:Connect(fn)
+		table.insert(win.Conns, c)
+		return c
+	end
+
+	-- ---------- ScreenGui ----------
+	local guiName = "PingoUI_" .. title
+	for _, p in ipairs(candidates()) do
+		local old = p:FindFirstChild(guiName)
+		if old then old:Destroy() end
+	end
+	local gui = new("ScreenGui", {Name = guiName, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 999, ZIndexBehavior = Enum.ZIndexBehavior.Sibling})
+	for _, p in ipairs(candidates()) do
+		local ok = pcall(function() gui.Parent = p end)
+		if ok and gui.Parent == p then break end
+	end
+
+	-- ---------- Draggable ----------
+	local function makeDraggable(handle, target, onTap)
+		local dragging, moved, startMouse, startPos = false, false, nil, nil
+		handle.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, moved = true, false
+				startMouse, startPos = input.Position, target.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						if dragging and not moved and onTap then onTap() end
+						dragging = false
+					end
+				end)
+			end
+		end)
+		A(UIS.InputChanged, function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				local d = input.Position - startMouse
+				if d.Magnitude > 6 then moved = true end
+				if moved then
+					target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+				end
+			end
+		end)
+	end
+
+	-- ---------- Holder / Main ----------
+	local Holder = new("Frame", {Name = "Holder", Size = UDim2.fromOffset(W, H), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Visible = false, Parent = gui})
+	local fitScale = new("UIScale", {Parent = Holder})
+	local function refit()
+		local cam = workspace.CurrentCamera
+		local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+		fitScale.Scale = math.clamp(math.min((vp.X - 20) / W, (vp.Y - 20) / H), 0.45, 1)
+	end
+	refit()
+	if workspace.CurrentCamera then A(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"), refit) end
+
+	local Main = new("CanvasGroup", {Name = "Main", Size = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BorderSizePixel = 0, GroupTransparency = 1, Parent = Holder}, {corner(12)})
+	bind(Main, "BackgroundColor3", "Background")
+	local openScale = new("UIScale", {Scale = 0.9, Parent = Main})
+	local mainStroke = new("UIStroke", {Thickness = 1.5, Parent = Main})
+	bind(mainStroke, "Color", "Stroke")
+
+	-- ---------- Sidebar ----------
+	local Sidebar = new("Frame", {Name = "Sidebar", Size = UDim2.new(0, 170, 1, 0), BorderSizePixel = 0, Parent = Main})
+	bind(Sidebar, "BackgroundColor3", "Sidebar")
+	local divider = new("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BorderSizePixel = 0, Parent = Sidebar})
+	bind(divider, "BackgroundColor3", "Stroke")
+
+	local dragArea = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Active = true, Parent = Sidebar})
+	makeDraggable(dragArea, Holder)
+
+	local titleRow = new("Frame", {Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 30), BackgroundTransparency = 1, Parent = Sidebar}, {
+		new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder}),
+	})
+	local titleLbl = mkText("TextLabel", {Text = title, Font = Enum.Font.GothamBold, TextSize = 24, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 30), LayoutOrder = 1, Parent = titleRow}, "Accent")
+	mkText("TextLabel", {Text = version, Font = Enum.Font.Gotham, TextSize = 11, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 20), LayoutOrder = 2, Parent = titleRow}, "SubText")
+
+	local SideList = new("ScrollingFrame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -124), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = Sidebar}, {
+		new("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
+		new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 2)}),
+	})
+	local BottomHolder = new("Frame", {Position = UDim2.new(0, 0, 1, -58), Size = UDim2.new(1, -1, 0, 58), BackgroundTransparency = 1, Parent = Sidebar}, {
+		new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingTop = UDim.new(0, 10)}),
+	})
+
+	-- ---------- Content ----------
+	local Content = new("Frame", {Name = "Content", Position = UDim2.fromOffset(170, 0), Size = UDim2.new(1, -170, 1, 0), BackgroundTransparency = 1, Parent = Main})
+	local dragTop = new("Frame", {Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, Active = true, Parent = Content})
+	makeDraggable(dragTop, Holder)
+
+	-- Search
+	local SearchBar = new("Frame", {Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -78, 0, 38), BorderSizePixel = 0, Parent = Content}, {corner(8)})
+	bind(SearchBar, "BackgroundColor3", "Sidebar")
+	local searchStroke = new("UIStroke", {Thickness = 1, Parent = SearchBar})
+	bind(searchStroke, "Color", "Stroke")
+	local searchIcon = new("ImageLabel", {Image = "rbxassetid://6031154871", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, Parent = SearchBar})
+	bind(searchIcon, "ImageColor3", "SubText")
+	local SearchBox = mkText("TextBox", {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0), Text = "", PlaceholderText = "Search", Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = SearchBar}, "Text")
+	bind(SearchBox, "PlaceholderColor3", "SubText")
+	SearchBox.Focused:Connect(function() bind(searchStroke, "Color", "Accent", true) end)
+	SearchBox.FocusLost:Connect(function() bind(searchStroke, "Color", "Stroke", true) end)
+
+	-- Close
+	local CloseBtn = mkText("TextButton", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 14), Size = UDim2.fromOffset(46, 38), Text = "×", Font = Enum.Font.GothamBold, TextSize = 24, AutoButtonColor = false, BorderSizePixel = 0, BackgroundTransparency = 0, Parent = Content}, "Text")
+	corner(8).Parent = CloseBtn
+	bind(CloseBtn, "BackgroundColor3", "Card")
+	CloseBtn.MouseEnter:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("Accent")}) end)
+	CloseBtn.MouseLeave:Connect(function() tw(CloseBtn, 0.15, {BackgroundColor3 = T("Card")}) end)
+
+	local TabBarHolder = new("Frame", {Position = UDim2.fromOffset(16, 60), Size = UDim2.new(1, -32, 0, 36), BackgroundTransparency = 1, Parent = Content})
+	local PagesHolder = new("Frame", {Position = UDim2.fromOffset(16, 106), Size = UDim2.new(1, -32, 1, -118), BackgroundTransparency = 1, ClipsDescendants = true, Parent = Content})
+
+	local SearchPage = new("ScrollingFrame", {Name = "SearchPage", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Visible = false, Parent = PagesHolder}, {
+		new("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8)}),
+		new("UIGridLayout", {CellSize = UDim2.new(0.5, -8, 0, 58), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder}),
+	})
+	bind(SearchPage, "ScrollBarImageColor3", "SubText")
+
+	-- ---------- Core selection logic ----------
+	local selectTab, selectSideTab
+
+	local function playIn(tab)
+		for i, card in ipairs(tab.Cards) do
+			if i > 24 then break end
+			local s = card:FindFirstChild("Scale")
+			if s then
+				s.Scale = 0.9
+				task.delay((i - 1) * 0.02, function()
+					if s.Parent then tw(s, 0.28, {Scale = 1}, Enum.EasingStyle.Back) end
+				end)
+			end
+		end
+	end
+
+	local function hideAllPages()
+		for _, st in ipairs(win.SideTabs) do
+			for _, t in ipairs(st.Tabs) do t.Page.Visible = false end
+		end
+	end
+
+	selectTab = function(tab)
+		if win.SearchText ~= "" then SearchBox.Text = "" end
+		local st = tab.SideTab
+		for _, o in ipairs(win.SideTabs) do
+			for _, t in ipairs(o.Tabs) do
+				t.Page.Visible = false
+				tw(t.Button, 0.2, {BackgroundTransparency = 1})
+				bind(t.Button, "TextColor3", "SubText", true)
+			end
+		end
+		st.ActiveTab = tab
+		win.ActiveSideTab = st
+		tab.Page.Visible = true
+		tw(tab.Button, 0.2, {BackgroundTransparency = 0})
+		bind(tab.Button, "TextColor3", "Accent", true)
+		playIn(tab)
+	end
+
+	selectSideTab = function(st)
+		if win.SearchText ~= "" then SearchBox.Text = "" end
+		for _, o in ipairs(win.SideTabs) do
+			local active = (o == st)
+			o.Active = active
+			tw(o.Button, 0.2, {BackgroundTransparency = active and 0 or 1})
+			bind(o.Label, "TextColor3", active and "White" or "Text", true)
+			if o.Icon then bind(o.Icon, "ImageColor3", active and "White" or "Text", true) end
+			o.TabBar.Visible = active and #o.Tabs > 0
+		end
+		win.ActiveSideTab = st
+		local t = st.ActiveTab or st.Tabs[1]
+		if t then selectTab(t) else hideAllPages() end
+	end
+
+	-- ---------- Search ----------
+	local function performSearch(q)
+		q = string.lower(q):gsub("^%s+", ""):gsub("%s+$", "")
+		win.SearchText = q
+		if q == "" then
+			for _, e in ipairs(win.Elements) do
+				if e.Frame.Parent == SearchPage then e.Frame.Parent = e.Page end
+			end
+			SearchPage.Visible = false
+			TabBarHolder.Visible = true
+			local st = win.ActiveSideTab
+			if st and st.ActiveTab then st.ActiveTab.Page.Visible = true end
+			return
+		end
+		hideAllPages()
+		TabBarHolder.Visible = false
+		SearchPage.Visible = true
+		for _, e in ipairs(win.Elements) do
+			if string.find(e.Name, q, 1, true) then
+				e.Frame.Parent = SearchPage
+			elseif e.Frame.Parent == SearchPage then
+				e.Frame.Parent = e.Page
+			end
+		end
+	end
+	SearchBox:GetPropertyChangedSignal("Text"):Connect(function() performSearch(SearchBox.Text) end)
+
+	-- ---------- Cards ----------
+	local function newCard(name)
+		win.Counter = win.Counter + 1
+		local card = new("Frame", {Name = name, BorderSizePixel = 0, LayoutOrder = win.Counter})
+		bind(card, "BackgroundColor3", "Card")
+		corner(8).Parent = card
+		local st = new("UIStroke", {Thickness = 1, Transparency = 0.35, Parent = card})
+		bind(st, "Color", "Stroke")
+		new("UIScale", {Name = "Scale", Parent = card})
+		new("Frame", {Name = "Shine", BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = card}, {corner(8)})
+		return card
+	end
+
+	local function finish(tab, card, name, searchable)
+		card.Parent = tab.Page
+		table.insert(tab.Cards, card)
+		if searchable ~= false then
+			table.insert(win.Elements, {Name = string.lower(name), Frame = card, Page = tab.Page})
+		end
+	end
+
+	local function hover(card, src)
+		local shine = card.Shine
+		src.MouseEnter:Connect(function() tw(shine, 0.15, {BackgroundTransparency = 0.93}) end)
+		src.MouseLeave:Connect(function() tw(shine, 0.15, {BackgroundTransparency = 1}) end)
+	end
+
+	local function hitButton(card)
+		return new("TextButton", {Name = "Hit", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = card})
+	end
+
+	-- ---------- Tabs ----------
+	local function layoutTabs(st)
+		local n = #st.Tabs
+		for _, t in ipairs(st.Tabs) do
+			t.Button.Size = UDim2.new(1 / n, -(4 * (n - 1)) / n, 1, 0)
+		end
+	end
+
+	local function createTab(st, name, opts)
+		opts = opts or {}
+		local tab = {Name = name, SideTab = st, Cards = {}}
+
+		local btn = new("TextButton", {Name = name, Text = name, Font = Enum.Font.GothamMedium, TextSize = 13, AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = #st.Tabs + 1, Parent = st.TabBar}, {corner(6)})
+		bind(btn, "BackgroundColor3", "Card")
+		bind(btn, "TextColor3", "SubText")
+		tab.Button = btn
+
+		local page = new("ScrollingFrame", {Name = st.Name .. "_" .. name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Visible = false, Parent = PagesHolder}, {
+			new("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8)}),
+			new("UIGridLayout", {CellSize = opts.CellSize or UDim2.new(0.5, -8, 0, 58), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder}),
+		})
+		bind(page, "ScrollBarImageColor3", "SubText")
+		tab.Page = page
+
+		table.insert(st.Tabs, tab)
+		layoutTabs(st)
+		if win.ActiveSideTab == st then st.TabBar.Visible = true end
+
+		btn.MouseButton1Click:Connect(function() selectTab(tab) end)
+		btn.MouseEnter:Connect(function()
+			if st.ActiveTab ~= tab then tw(btn, 0.15, {BackgroundTransparency = 0.7}) end
+		end)
+		btn.MouseLeave:Connect(function()
+			if st.ActiveTab ~= tab then tw(btn, 0.15, {BackgroundTransparency = 1}) end
+		end)
+
+		if win.ActiveSideTab == st and not st.ActiveTab then selectTab(tab) end
+
+		-- ===== BUTTON =====
+		function tab:AddButton(name, callback)
+			local card = newCard(name)
+			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -28, 1, 0), Parent = card})
+			local hit = hitButton(card)
+			hover(card, hit)
+			local sc, shine = card.Scale, card.Shine
+			hit.MouseButton1Down:Connect(function() tw(sc, 0.1, {Scale = 0.96}); tw(shine, 0.1, {BackgroundTransparency = 0.85}) end)
+			hit.MouseButton1Up:Connect(function() tw(sc, 0.2, {Scale = 1}, Enum.EasingStyle.Back); tw(shine, 0.2, {BackgroundTransparency = 0.93}) end)
+			hit.MouseLeave:Connect(function() tw(sc, 0.15, {Scale = 1}) end)
+			hit.MouseButton1Click:Connect(function()
+				if callback then task.spawn(callback) end
+			end)
+			finish(tab, card, name)
+			return {Card = card}
+		end
+
+		-- ===== TOGGLE =====
+		function tab:AddToggle(name, default, callback)
+			local state = default == true
+			local card = newCard(name)
+			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -72, 1, 0), Parent = card})
+			local sw = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(40, 22), BorderSizePixel = 0, Parent = card}, {corner(11)})
+			bind(sw, "BackgroundColor3", state and "Accent" or "Off")
+			local knob = new("Frame", {AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(16, 16), Position = state and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw}, {corner(8)})
+			local hit = hitButton(card)
+			hover(card, hit)
+			local sc = card.Scale
+
+			local obj = {Card = card}
+			local function apply(v, fire)
+				state = v
+				bind(sw, "BackgroundColor3", state and "Accent" or "Off", true)
+				tw(knob, 0.22, {Position = state and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)}, Enum.EasingStyle.Back)
+				if fire and callback then task.spawn(callback, state) end
+			end
+			function obj:Set(v) apply(v == true, true) end
+			function obj:Get() return state end
+
+			hit.MouseButton1Down:Connect(function() tw(sc, 0.1, {Scale = 0.97}) end)
+			hit.MouseButton1Up:Connect(function() tw(sc, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
+			hit.MouseLeave:Connect(function() tw(sc, 0.15, {Scale = 1}) end)
+			hit.MouseButton1Click:Connect(function() apply(not state, true) end)
+
+			finish(tab, card, name)
+			if state and callback then task.spawn(callback, true) end
+			return obj
+		end
+
+		-- ===== SLIDER =====
+		function tab:AddSlider(name, min, max, default, callback, increment)
+			min, max = min or 0, max or 100
+			increment = increment or 1
+			local dec = 0
+			local d = tostring(increment):match("%.(%d+)")
+			if d then dec = #d end
+			local function snap(v)
+				v = math.floor((v - min) / increment + 0.5) * increment + min
+				v = math.clamp(v, min, max)
+				return tonumber(string.format("%." .. dec .. "f", v))
+			end
+
+			local card = newCard(name)
+			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -90, 0, 16), Parent = card})
+			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8), Size = UDim2.fromOffset(64, 16), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Text = "", Parent = card}, "SubText")
+			local track = new("Frame", {Position = UDim2.fromOffset(14, 38), Size = UDim2.new(1, -28, 0, 6), BorderSizePixel = 0, Parent = card}, {corner(3)})
+			bind(track, "BackgroundColor3", "Off")
+			local fill = new("Frame", {Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = track}, {corner(3)})
+			grad(new("UIGradient", {Parent = fill}))
+			local knob = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(12, 12), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = track}, {corner(6)})
+
+			local value
+			local function apply(v, fire, animate)
+				v = snap(v)
+				local pct = (max - min) == 0 and 0 or (v - min) / (max - min)
+				valLbl.Text = tostring(v)
+				if animate then
+					tw(fill, 0.12, {Size = UDim2.fromScale(pct, 1)})
+					tw(knob, 0.12, {Position = UDim2.fromScale(pct, 0.5)})
+				else
+					fill.Size = UDim2.fromScale(pct, 1)
+					knob.Position = UDim2.fromScale(pct, 0.5)
+				end
+				if v ~= value then
+					value = v
+					if fire and callback then task.spawn(callback, v) end
+				end
+			end
+			apply(default or min, false, false)
+
+			local hit = new("TextButton", {Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 1, -24), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = card})
+			hover(card, card)
+			local dragging = false
+			local function fromX(x)
+				local pct = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+				apply(min + (max - min) * pct, true, false)
+			end
+			hit.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					dragging = true
+					page.ScrollingEnabled = false
+					tw(knob, 0.12, {Size = UDim2.fromOffset(17, 17)})
+					fromX(input.Position.X)
+				end
+			end)
+			A(UIS.InputChanged, function(input)
+				if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+					fromX(input.Position.X)
+				end
+			end)
+			A(UIS.InputEnded, function(input)
+				if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+					dragging = false
+					page.ScrollingEnabled = true
+					tw(knob, 0.15, {Size = UDim2.fromOffset(12, 12)})
+				end
+			end)
+
+			local obj = {Card = card}
+			function obj:Set(v) apply(v, true, true) end
+			function obj:Get() return value end
+			finish(tab, card, name)
+			return obj
+		end
+
+		-- ===== TEXTBOX =====
+		function tab:AddTextbox(name, placeholder, callback, default)
+			local card = newCard(name)
+			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(0.5, -14, 1, 0), Parent = card})
+			local box = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.46, 0, 0, 30), ClipsDescendants = true, BorderSizePixel = 0, Parent = card}, {corner(6)})
+			bind(box, "BackgroundColor3", "Sidebar")
+			local bs = new("UIStroke", {Thickness = 1, Parent = box})
+			bind(bs, "Color", "Stroke")
+			local input = mkText("TextBox", {Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0), Text = default or "", PlaceholderText = placeholder or "Type...", Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ClearTextOnFocus = false, Parent = box})
+			bind(input, "PlaceholderColor3", "SubText")
+			hover(card, card)
+			input.Focused:Connect(function() bind(bs, "Color", "Accent", true) end)
+			input.FocusLost:Connect(function(enter)
+				bind(bs, "Color", "Stroke", true)
+				if callback then task.spawn(callback, input.Text, enter) end
+			end)
+			local obj = {Card = card}
+			function obj:Set(text) input.Text = tostring(text) end
+			function obj:Get() return input.Text end
+			finish(tab, card, name)
+			return obj
+		end
+
+		return tab
+	end
+
+	-- ---------- Side tabs ----------
+	local function createSideTab(name, iconId, bottom)
+		local st = {Name = name, Tabs = {}, Bottom = bottom}
+		local btn = new("TextButton", {Name = name, Size = UDim2.new(1, 0, 0, 38), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = #win.SideTabs + 1, Parent = bottom and BottomHolder or SideList}, {corner(9)})
+		bind(btn, "BackgroundColor3", "Accent")
+		st.Button = btn
+
+		local pad = 14
+		local ico = icon(iconId)
+		if ico then
+			pad = 42
+			st.Icon = new("ImageLabel", {Image = ico, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 13, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, Parent = btn})
+			bind(st.Icon, "ImageColor3", "Text")
+		end
+		st.Label = mkText("TextLabel", {Text = name, Font = Enum.Font.GothamMedium, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(pad, 0), Size = UDim2.new(1, -pad - 8, 1, 0), Parent = btn})
+
+		st.TabBar = new("Frame", {Name = name, Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Visible = false, Parent = TabBarHolder}, {
+			corner(8),
+			new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
+			new("UIPadding", {PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 3), PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3)}),
+		})
+		bind(st.TabBar, "BackgroundColor3", "Sidebar")
+		local tbs = new("UIStroke", {Thickness = 1, Parent = st.TabBar})
+		bind(tbs, "Color", "Stroke")
+
+		btn.MouseEnter:Connect(function() if not st.Active then tw(btn, 0.15, {BackgroundTransparency = 0.85}) end end)
+		btn.MouseLeave:Connect(function() if not st.Active then tw(btn, 0.15, {BackgroundTransparency = 1}) end end)
+		btn.MouseButton1Click:Connect(function() selectSideTab(st) end)
+
+		table.insert(win.SideTabs, st)
+		function st:CreateTab(tabName) return createTab(st, tabName) end
+		return st
+	end
+
+	function win:CreateSideTab(name, iconId)
+		local st = createSideTab(name, iconId, false)
+		if not win.UserSelected then
+			win.UserSelected = true
+			selectSideTab(st)
+		end
+		return st
+	end
+
+	-- ---------- Themes (built-in) ----------
+	local ThemesST = createSideTab("Themes", nil, true)
+	local ringList = {}
+	local function refreshRings()
+		for name, rings in pairs(ringList) do
+			for _, r in ipairs(rings) do tw(r, 0.2, {Transparency = (name == currentTheme) and 0 or 1}) end
+		end
+	end
+	ringRefreshers[win] = refreshRings
+
+	for _, group in ipairs(THEME_GROUPS) do
+		local tab = createTab(ThemesST, group, {CellSize = UDim2.new(0.25, -9, 0, 96)})
+		for _, info in ipairs(THEME_LIST) do
+			if group == "All" or info[2] == group then
+				local tname = info[1]
+				local card = newCard(tname)
+				new("Frame", {Name = "Swatch", Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -34), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = card}, {
+					corner(6),
+					new("UIGradient", {Rotation = 25, Color = ColorSequence.new(info[3], info[4])}),
+				})
+				mkText("TextLabel", {Text = tname, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 1, -26), Size = UDim2.new(1, -20, 0, 22), Parent = card})
+				local ring = new("Frame", {Name = "Ring", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = card}, {corner(8)})
+				local rs = new("UIStroke", {Thickness = 2, Color = info[3], Transparency = (tname == currentTheme) and 0 or 1, Parent = ring})
+				ringList[tname] = ringList[tname] or {}
+				table.insert(ringList[tname], rs)
+
+				local hit = hitButton(card)
+				hover(card, hit)
+				hit.MouseButton1Down:Connect(function() tw(card.Scale, 0.1, {Scale = 0.96}) end)
+				hit.MouseButton1Up:Connect(function() tw(card.Scale, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
+				hit.MouseLeave:Connect(function() tw(card.Scale, 0.15, {Scale = 1}) end)
+				hit.MouseButton1Click:Connect(function() PingoUI.SetTheme(tname) end)
+				finish(tab, card, tname, false)
+			end
+		end
+	end
+
+	-- ---------- Open / Close ----------
+	local token = 0
+	function win:Toggle(state)
+		if state == nil then state = not win.Opened end
+		if state == win.Opened then return end
+		win.Opened = state
+		token = token + 1
+		local my = token
+		if state then
+			Holder.Visible = true
+			openScale.Scale = 0.88
+			Main.GroupTransparency = 1
+			tw(openScale, 0.35, {Scale = 1}, Enum.EasingStyle.Back)
+			tw(Main, 0.25, {GroupTransparency = 0})
+			local st = win.ActiveSideTab
+			if st and st.ActiveTab then playIn(st.ActiveTab) end
+		else
+			tw(openScale, 0.2, {Scale = 0.92}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			tw(Main, 0.2, {GroupTransparency = 1})
+			task.delay(0.22, function()
+				if token == my then Holder.Visible = false end
+			end)
+		end
+	end
+	CloseBtn.MouseButton1Click:Connect(function() win:Toggle(false) end)
+
+	A(UIS.InputBegan, function(input, gp)
+		if gp then return end
+		if input.KeyCode == (config.Key or Enum.KeyCode.RightShift) then win:Toggle() end
+	end)
+
+	-- Floating open button
+	local OpenBtn = new("TextButton", {Name = "PingoOpen", Size = UDim2.fromOffset(46, 46), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 10, Parent = gui}, {corner(12)})
+	bind(OpenBtn, "BackgroundColor3", "Background")
+	local ob = new("UIStroke", {Thickness = 2, Parent = OpenBtn})
+	bind(ob, "Color", "Accent")
+	local obScale = new("UIScale", {Parent = OpenBtn})
+	if config.Icon then
+		new("ImageLabel", {Image = icon(config.Icon), Size = UDim2.new(1, -12, 1, -12), Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 1, Parent = OpenBtn})
+	else
+		mkText("TextLabel", {Text = string.sub(title, 1, 1), Font = Enum.Font.GothamBold, TextSize = 24, Size = UDim2.fromScale(1, 1), Parent = OpenBtn}, "Accent")
+	end
+	OpenBtn.MouseEnter:Connect(function() tw(obScale, 0.15, {Scale = 1.08}) end)
+	OpenBtn.MouseLeave:Connect(function() tw(obScale, 0.15, {Scale = 1}) end)
+	makeDraggable(OpenBtn, OpenBtn, function()
+		tw(obScale, 0.08, {Scale = 0.92})
+		task.delay(0.08, function() tw(obScale, 0.2, {Scale = 1}, Enum.EasingStyle.Back) end)
+		win:Toggle()
+	end)
+
+	-- ---------- Notifications ----------
+	local NotifHolder = new("Frame", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.new(0, 270, 1, -32), BackgroundTransparency = 1, ZIndex = 20, Parent = gui}, {
+		new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}),
+	})
+	local notifCount = 0
+	function win:Notify(nTitle, text, duration)
+		notifCount = notifCount + 1
+		local wrap = new("Frame", {Size = UDim2.fromOffset(270, 58), BackgroundTransparency = 1, LayoutOrder = notifCount, Parent = NotifHolder})
+		local n = new("Frame", {Position = UDim2.fromOffset(300, 0), Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = wrap}, {corner(8)})
+		bind(n, "BackgroundColor3", "Card")
+		local ns = new("UIStroke", {Thickness = 1, Parent = n})
+		bind(ns, "Color", "Stroke")
+		local bar = new("Frame", {Size = UDim2.new(0, 3, 1, -16), Position = UDim2.fromOffset(8, 8), BorderSizePixel = 0, Parent = n}, {corner(2)})
+		bind(bar, "BackgroundColor3", "Accent")
+		mkText("TextLabel", {Text = tostring(nTitle or ""), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(20, 8), Size = UDim2.new(1, -30, 0, 18), Parent = n})
+		mkText("TextLabel", {Text = tostring(text or ""), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Position = UDim2.fromOffset(20, 27), Size = UDim2.new(1, -30, 1, -32), Parent = n}, "SubText")
+		tw(n, 0.35, {Position = UDim2.fromOffset(0, 0)}, Enum.EasingStyle.Back)
+		task.delay(duration or 3, function()
+			if not n.Parent then return end
+			tw(n, 0.25, {Position = UDim2.fromOffset(300, 0)}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+			task.delay(0.28, function() wrap:Destroy() end)
+		end)
+	end
+
+	function win:SetTheme(name) PingoUI.SetTheme(name) end
+
+	function win:Destroy()
+		for _, c in ipairs(win.Conns) do pcall(function() c:Disconnect() end) end
+		ringRefreshers[win] = nil
+		gui:Destroy()
+	end
+
+	-- ---------- Start ----------
+	selectSideTab(ThemesST)
+	if not config.StartHidden then win:Toggle(true) end
+
+	return win
 end
 
 return PingoUI
