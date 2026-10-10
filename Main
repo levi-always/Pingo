@@ -86,6 +86,22 @@ local function new(class, props, children)
 	return o
 end
 
+local function autoFitText(label, maxWidth, minSize, maxSize)
+	minSize = minSize or 10
+	maxSize = maxSize or 16
+	local text = label.Text
+	local font = label.Font
+	
+	for size = maxSize, minSize, -1 do
+		local textSize = TextService:GetTextSize(text, size, font, Vector2.new(maxWidth, 100))
+		if textSize.X <= maxWidth then
+			label.TextSize = size
+			return
+		end
+	end
+	label.TextSize = minSize
+end
+
 local function corner(r) return new("UICorner", {CornerRadius = UDim.new(0, r)}) end
 
 local function icon(i)
