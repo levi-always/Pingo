@@ -1535,10 +1535,10 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-		-- ===== STEPPER ( -  value  + ) with press & hold =====
+		-- ===== STEPPER ( -  value  + ) with Animation & Particle Float =====
 		function tab:AddStepper(a, mn, mx, default, step, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Min = mn, Max = mx, Default = default, Step = step, Callback = callback}, extra)
-			local min, max = o.Min or 0, o.Max or 100
+			local min, max = o.Min or 0, o.Max = 100
 			step = o.Step or 1
 			local fmt = o.Format or function(v) return tostring(v) end
 			local default0 = math.clamp(o.Default or min, min, max)
@@ -1550,6 +1550,30 @@ function Pingo.CreateWindow(title, version, config)
 			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = valBase, Size = UDim2.fromOffset(40, 24), Text = fmt(value), Font = Enum.Font.GothamBold, TextSize = 13, Parent = body}, "Text")
 			local valScale = new("UIScale", {Parent = valLbl})
 
+			-- دالة إنشاء تأثير تطاير الجسيمات (Particle Text Effect)
+			local function spawnParticle(valChange, isInc)
+				local p = new("TextLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(1, -60, 0.5, 0),
+					Size = UDim2.fromOffset(60, 20),
+					Text = (isInc and "+" or "-") .. tostring(valChange),
+					Font = Enum.Font.GothamBold,
+					TextSize = 13,
+					TextColor3 = isInc and rgb(46, 220, 130) or rgb(255, 70, 90), -- أخضر للزيادة، أحمر للنقصان
+					TextTransparency = 0,
+					ZIndex = 10,
+					Parent = body
+				})
+				local sc = new("UIScale", {Scale = 0.8, Parent = p})
+				
+				-- أنمييشن الطيران للأعلى والاختفاء خلال ثانية
+				tw(p, 1.0, {Position = UDim2.new(1, -60, 0.5, -35), TextTransparency = 1}, QUAD, IN)
+				tw(sc, 1.0, {Scale = 1.3}, BACK)
+				task.delay(1.0, function()
+					if p and p.Parent then p:Destroy() end
+				end)
+			end
+
 			local function apply(v, fire, dir)
 				v = math.clamp(v, min, max)
 				if v == value then
@@ -1559,6 +1583,7 @@ function Pingo.CreateWindow(title, version, config)
 					end
 					return false
 				end
+				local diff = math.abs(v - value)
 				value = v
 				valLbl.Text = fmt(v)
 				valLbl.Position = UDim2.new(1, -60, 0.5, (dir or 0) * 8)
@@ -1566,6 +1591,10 @@ function Pingo.CreateWindow(title, version, config)
 				valScale.Scale = 1.12
 				tw(valLbl, 0.22, {Position = valBase, TextTransparency = 0}, Q)
 				tw(valScale, 0.3, {Scale = 1}, BACK)
+				
+				-- تشغيل تأثير الجسيمات المتطايرة
+				spawnParticle(diff, (dir or 1) > 0)
+
 				if fire and o.Callback then task.spawn(o.Callback, v) end
 				return true
 			end
@@ -1581,37 +1610,22 @@ function Pingo.CreateWindow(title, version, config)
 				else
 					im = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Text = glyph, Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 5, Parent = b}, "Text")
 				end
-				local token = 0
-				b.InputBegan:Connect(function(input)
-					if isPress(input) then
-						token = token + 1
-						local my = token
-						tw(s, 0.1, {Scale = 0.78})
-						tw(b, 0.1, {BackgroundColor3 = T("AccentDark")})
-						tw(im, 0.1, {Rotation = dir * 18})
-						ripple(body, input)
-						apply(value + dir * step, true, dir)
-						task.spawn(function()
-							task.wait(0.38)
-							local interval = 0.11
-							while token == my and b.Parent do
-								if not apply(value + dir * step, true, dir) then break end
-								task.wait(interval)
-								interval = math.max(0.035, interval * 0.93)
-							end
-						end)
-					end
+
+				-- استخدام MouseButton1Down لضمان الاستجابة الفورية باللمس والماوس
+				b.MouseButton1Down:Connect(function()
+					tw(s, 0.1, {Scale = 0.78})
+					tw(b, 0.1, {BackgroundColor3 = T("AccentDark")})
+					tw(im, 0.1, {Rotation = dir * 18})
+					apply(value + dir * step, true, dir)
+					task.delay(0.15, function()
+						tw(s, 0.35, {Scale = 1}, BACK)
+						tw(b, 0.25, {BackgroundColor3 = T("Sidebar")})
+						tw(im, 0.35, {Rotation = 0}, BACK)
+					end)
 				end)
-				local function release()
-					token = token + 1
-					tw(s, 0.35, {Scale = 1}, BACK)
-					tw(b, 0.25, {BackgroundColor3 = T("Sidebar")})
-					tw(im, 0.35, {Rotation = 0}, BACK)
-				end
-				A(UIS.InputEnded, function(input) if token > 0 and isPress(input) then release() end end)
-				b.MouseLeave:Connect(release)
 				return b
 			end
+			
 			mkBtn(o.MinusIcon or ICON.Minus, -84, -1, "−")
 			mkBtn(o.PlusIcon or ICON.Plus, -10, 1, "+")
 
