@@ -8,7 +8,7 @@
       Profile  -> Auto-Load / Load / Delete / Rename
 
     Built-in SideTabs (bottom): Themes, Config, Settings
-    
+
     local Window = Pingo.CreateWindow("Pingo Hub", "v1.0.0", {
         Theme = "Ruby", Update = "ThePerfect", Key = Enum.KeyCode.RightShift,
         Icon = "rbxassetid://...", ButtonText = "Pingo",
@@ -60,7 +60,6 @@ local ICON = {
 	Minus = 12338394619,
 	Plus = 12338396009,
 	Search = 6031154871,
-    Copy = 103287906385313,
 }
 
 -- ============================================================
@@ -84,22 +83,6 @@ local function new(class, props, children)
 	for _, c in ipairs(children or {}) do c.Parent = o end
 	if parent then o.Parent = parent end
 	return o
-end
-
-local function autoFitText(label, maxWidth, minSize, maxSize)
-	minSize = minSize or 10
-	maxSize = maxSize or 16
-	local text = label.Text
-	local font = label.Font
-	
-	for size = maxSize, minSize, -1 do
-		local textSize = TextService:GetTextSize(text, size, font, Vector2.new(maxWidth, 100))
-		if textSize.X <= maxWidth then
-			label.TextSize = size
-			return
-		end
-	end
-	label.TextSize = minSize
 end
 
 local function corner(r) return new("UICorner", {CornerRadius = UDim.new(0, r)}) end
@@ -474,7 +457,7 @@ function Pingo.CreateWindow(title, version, config)
 	local titleRow = new("Frame", {Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 30), BackgroundTransparency = 1, Parent = Sidebar}, {
 		new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
-	local titleLbl = mkText("TextLabel", {Text = title, Font = Enum.Font.GothamBold, TextSize = 24, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 30), LayoutOrder = 1, Parent = titleRow}, "Accent")
+	local titleLbl = mkText("TextLabel", {Text = title, Font = Enum.Font.GothamBold, TextSize = 24, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 30), LayoutOrder = 1, Parent = titleRow}, "White")
 	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 	mkText("TextLabel", {Text = version, Font = Enum.Font.Gotham, TextSize = 11, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 0, 20), LayoutOrder = 2, Parent = titleRow}, "SubText")
@@ -708,7 +691,7 @@ function Pingo.CreateWindow(title, version, config)
 			end
 		end
 		for _, t in ipairs(tabsOf(st)) do
-			bind(t.Button, "TextColor3", (t == display) and "Accent" or "SubText", true)
+			bind(t.Button, "TextColor3", (t == display) and "White" or "SubText", true)
 		end
 		st.ActiveTab, st.Display = tab, display
 		win.ActiveSideTab, win.CurrentTab = st, tab
@@ -1648,165 +1631,6 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-		-- ===== CODE (themed, copy button, syntax colors) =====
-		function tab:AddCode(a, code, extra)
-			local o = type(a) == "table" and a or merge({Name = a, Code = code}, extra)
-			local body = newCard(o.Name or "Code")
-			local nameLbl = header(body, o, 0, 52)
-			local copyBtn = new("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0, 26), Size = UDim2.fromOffset(28, 28), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 4, Parent = body}, {corner(7)})
-			bind(copyBtn, "BackgroundColor3", "Off")
-			local copyIcon = new("ImageLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = icon(o.CopyIcon or ICON.Copy or ICON.Star), ZIndex = 5, Parent = copyBtn})
-			bind(copyIcon, "ImageColor3", "Text")
-
-			local codeBox = new("Frame", {Position = UDim2.fromOffset(10, 56), Size = UDim2.new(1, -20, 1, -66), BorderSizePixel = 0, ClipsDescendants = true, Parent = body}, {corner(8)})
-			bind(codeBox, "BackgroundColor3", "Sidebar")
-			local codeScroll = new("ScrollingFrame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.XY, CanvasSize = UDim2.new(), Parent = codeBox}, {
-				new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8)}),
-			})
-			bind(codeScroll, "ScrollBarImageColor3", "SubText")
-
-			-- simple syntax coloring (keywords, strings, numbers, comments)
-			local KEYWORDS = {["local"]=1,["function"]=1,["end"]=1,["if"]=1,["then"]=1,["else"]=1,["elseif"]=1,["for"]=1,["while"]=1,["do"]=1,["return"]=1,["in"]=1,["and"]=1,["or"]=1,["not"]=1,["nil"]=1,["true"]=1,["false"]=1,["repeat"]=1,["until"]=1,["break"]=1}
-			local function colorize(line)
-				local out, i, n = {}, 1, #line
-				while i <= n do
-					local c = line:sub(i, i)
-					local rest = line:sub(i)
-					local piece, key
-					if rest:sub(1, 2) == "--" then
-						piece, key = rest, "SubText"
-					elseif c == '"' or c == "'" then
-						local j = i + 1
-						while j <= n and line:sub(j, j) ~= c do
-							if line:sub(j, j) == "\\" then j = j + 1 end
-							j = j + 1
-						end
-						piece, key = line:sub(i, j), "Accent2"
-					elseif c:match("%d") then
-						piece = rest:match("^%d+%.?%d*") or c
-						key = "Accent"
-					elseif c:match("[%a_]") then
-						local word = rest:match("^[%a_][%w_]*")
-						piece = word
-						key = KEYWORDS[word] and "Accent" or (rest:sub(#word + 1, #word + 1) == "(" and "Text" or "Text")
-					else
-						piece, key = c, "SubText"
-					end
-					piece = piece or c
-					table.insert(out, {piece, key})
-					i = i + #piece
-				end
-				return out
-			end
-
-			local codeLines = {}
-			local function render(src)
-				for _, l in ipairs(codeLines) do l:Destroy() end
-				codeLines = {}
-				local y = 0
-				for lineNo, line in ipairs(string.split(tostring(src), "\n")) do
-					local lbl = new("TextLabel", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 16), Text = "", Font = Enum.Font.Code, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3, Parent = codeScroll})
-					local rich = {}
-					for _, seg in ipairs(colorize(line)) do
-						local col = T(seg[2]) or T("Text")
-						table.insert(rich, string.format('<font color="#%02X%02X%02X">%s</font>', col.R * 255, col.G * 255, col.B * 255, (seg[1]:gsub("<", "&lt;"):gsub(">", "&gt;"))))
-					end
-					lbl.RichText = true
-					lbl.Text = table.concat(rich)
-					table.insert(codeLines, lbl)
-					y = y + 16
-				end
-				codeScroll.CanvasSize = UDim2.fromOffset(0, y + 16)
-			end
-			render(o.Code or "")
-
-			local obj = {Card = body, Listeners = {}}
-			function obj:SetCode(src) render(src) end
-			function obj:Get() return o.Code end
-			copyBtn.MouseButton1Click:Connect(function()
-				local text = tostring(o.Code or "")
-				if type(setclipboard) == "function" then setclipboard(text) end
-				tw(copyIcon, 0.2, {Rotation = 360}, Q)
-				if win and win.Notify then win:Notify("Copied", "Copied to clipboard.", 2) end
-			end)
-			hover(body, body)
-			finish(tab, body, o, "code", obj, {copyBtn})
-			return obj
-		end
-
-		-- ===== INFO PAGE (image + title + text + action buttons, Back top-left) =====
-		function tab:AddInfoPage(a, spec, extra)
-			local o = type(a) == "table" and a or merge({Name = a, Info = spec}, extra)
-			local info = o.Info or {}
-			local body = newCard(o.Name)
-			header(body, o, 0, 40)
-			mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, -2), Size = UDim2.fromOffset(18, 24), Text = "›", Font = Enum.Font.GothamBold, TextSize = 26, Parent = body}, "SubText")
-			local hit = hitButton(body)
-			hover(body, hit)
-			pressFx(body, hit)
-
-			local function show()
-				local overlay = new("TextButton", {Name = "InfoOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 60, Parent = Main})
-				local dlg = new("CanvasGroup", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.86, 0, 0.8, 0), BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 61, Parent = overlay}, {corner(14)})
-				bind(dlg, "BackgroundColor3", "Sidebar")
-				local dst = new("UIStroke", {Thickness = 1.5, Transparency = 0.35, Parent = dlg})
-				bind(dst, "Color", "Accent")
-
-				-- Back button (top-left)
-				local back = pill(dlg, {Text = "Back", Icon = o.BackIcon}, {Size = UDim2.fromOffset(74, 30), Position = UDim2.fromOffset(12, 12), Radius = 8, TextSize = 12})
-				back.ZIndex = 62
-				local function close()
-					tw(dlg, 0.2, {GroupTransparency = 1})
-					task.delay(0.22, function() unbindTree(overlay); overlay:Destroy() end)
-				end
-				back.MouseButton1Click:Connect(close)
-
-				-- Icon + title
-				local ix = 12
-				if info.Icon then
-					ix = 96
-					local img = new("ImageLabel", {Image = icon(info.Icon), Position = UDim2.fromOffset(14, 52), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, ZIndex = 62, Parent = dlg}, {corner(10)})
-					if info.Tint then bind(img, "ImageColor3", "Accent") end
-				end
-				mkText("TextLabel", {Text = tostring(info.Title or o.Name), Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(ix, 56), Size = UDim2.new(1, -ix - 14, 0, 26), ZIndex = 62, Parent = dlg})
-				mkText("TextLabel", {Text = tostring(info.Subtitle or ""), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(ix, 84), Size = UDim2.new(1, -ix - 14, 0, 16), ZIndex = 62, Parent = dlg}, "SubText")
-
-				-- Body text (scrollable)
-				local scroll = new("ScrollingFrame", {Position = UDim2.fromOffset(14, 130), Size = UDim2.new(1, -28, 1, -(130 + 60)), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 62, Parent = dlg})
-				bind(scroll, "ScrollBarImageColor3", "SubText")
-				local txt = mkText("TextLabel", {Text = tostring(info.Text or ""), Font = Enum.Font.Gotham, TextSize = 13, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, -6, 0, 0), ZIndex = 62, Parent = scroll}, "SubText")
-
-				-- Action buttons (bottom, any number)
-				local buttons = info.Buttons or {}
-				if #buttons > 0 then
-					local bar = new("Frame", {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -28, 0, 34), BackgroundTransparency = 1, ZIndex = 62, Parent = dlg}, {
-						new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder}),
-					})
-					for i, spec2 in ipairs(buttons) do
-						local pb = pill(bar, {Text = spec2.Text, Icon = spec2.Icon, Style = spec2.Style or "Default"}, {Size = UDim2.new(1 / #buttons, -8, 1, 0), Radius = 9, TextSize = 12})
-						pb.LayoutOrder = i
-						pb.ZIndex = 63
-						pb.MouseButton1Click:Connect(function()
-							if spec2.Callback then task.spawn(spec2.Callback) end
-							if spec2.Close ~= false then close() end
-						end)
-					end
-				end
-
-				dlg.Position = UDim2.fromScale(0.5, 0.56)
-				tw(dlg, 0.35, {GroupTransparency = 0})
-				tw(dlg, 0.5, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
-			end
-
-			hit.MouseButton1Click:Connect(function()
-				if hold.consumed then return end
-				show()
-			end)
-			local obj = {Card = body, Show = show}
-			finish(tab, body, o, "info", obj, {hit})
-			return obj
-		end
-
 		-- ===== DROPDOWN (tall searchable panel, Max = how many can be selected) =====
 		function tab:AddDropdown(a, options, default, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Options = options, Default = default, Callback = callback}, extra)
@@ -1984,16 +1808,13 @@ function Pingo.CreateWindow(title, version, config)
 	}), Parent = sweep})
 	TweenService:Create(sg, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 3), {Offset = Vector2.new(1, 0)}):Play()
 
-	
-		local iconBox = new("Frame", {Position = UDim2.fromOffset(7, 7), Size = UDim2.fromOffset(32, 32), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 13, Parent = OpenBtn}, {corner(9)})
+	local iconBox = new("Frame", {Position = UDim2.fromOffset(7, 7), Size = UDim2.fromOffset(32, 32), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 13, Parent = OpenBtn}, {corner(9)})
 	local iconPop = new("UIScale", {Parent = iconBox})
-	local openIconId = config.OpenIcon or config.Icon
-	if openIconId then
-		new("ImageLabel", {Image = icon(openIconId), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1, ZIndex = 14, Parent = iconBox}, {corner(7)})
+	if config.Icon then
+		new("ImageLabel", {Image = icon(config.Icon), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -6, 1, -6), BackgroundTransparency = 1, ZIndex = 14, Parent = iconBox}, {corner(7)})
 	else
 		new("TextLabel", {Text = string.upper(string.sub(btnText, 1, 1)), Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 14, Parent = iconBox})
 	end
-	
 	new("TextLabel", {Text = btnText, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(49, 0), Size = UDim2.new(1, -49, 1, 0), ZIndex = 13, Parent = OpenBtn})
 
 	OpenBtn.MouseEnter:Connect(function() tw(obScale, 0.25, {Scale = 1.06}, BACK); tw(obStroke, 0.2, {Transparency = 0}) end)
