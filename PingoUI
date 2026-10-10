@@ -220,6 +220,17 @@ local function grad(keys, parent, props)
 end
 
 function Pingo.SetTheme(name)
+    if not THEMES[name] then return end
+    currentTheme = name
+    
+    for obj, b in pairs(bindings) do
+        if obj.Parent then
+            for prop, key in pairs(b) do
+                tw(obj, 0.35, {[prop] = T(key)})
+            end
+        end
+    end
+end
 	if not THEMES[name] then return end
 	currentTheme = name
 	for obj, b in pairs(bindings) do
@@ -2721,7 +2732,13 @@ function Pingo.CreateWindow(title, version, config)
 	end
 
 	-- ----- Settings -----
-	local General = createTab(SettingsST, "General", {System = true})
+local MenuTab = createTab(SettingsST, "Menu", {System = true})
+MenuTab:AddSlider("Menu Transparency", 0, 100, 0, function(v) Main.GroupTransparency = v / 100 end, 1, {Suffix = "%", Description = "Menu transparency"})
+local InfoTab = createTab(SettingsST, "Info", {System = true})
+InfoTab:AddLabel("Name", title)
+InfoTab:AddLabel("Version", version)
+InfoTab:AddLabel("Update", updateName, true)
+InfoTab:AddLabel("Library", "Pingo " .. Pingo.Version)
 	win.SizeStepper = General:AddStepper("Menu Size", 60, 140, 100, 10, function(v) win:SetSizeMultiplier(v / 100) end, {
 		MinusIcon = config.MinusIcon or ICON.Minus,
 		PlusIcon = config.PlusIcon or ICON.Plus,
