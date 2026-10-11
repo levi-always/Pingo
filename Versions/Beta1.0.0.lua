@@ -1501,10 +1501,10 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-		function tab:AddStepper(a, mn, mx, default, step, callback, extra)
+				function tab:AddStepper(a, mn, mx, default, step, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Min = mn, Max = mx, Default = default, Step = step, Callback = callback}, extra)
 			local min, max = o.Min or 0, o.Max or 100
-			step = o.Step or 1
+			local amount = o.Amount or 10 -- يمكنك تحديد قيمة amount هنا أو تمريرها عبر الـ extra
 			local fmt = o.Format or function(v) return tostring(v) end
 			local default0 = math.clamp(o.Default or min, min, max)
 			local value = default0
@@ -1514,47 +1514,27 @@ function Pingo.CreateWindow(title, version, config)
 			local valBase = UDim2.new(1, -60, 0.5, 0)
 			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = valBase, Size = UDim2.fromOffset(40, 24), Text = fmt(value), Font = Enum.Font.GothamBold, TextSize = 13, Parent = body}, "Text")
 			local valScale = new("UIScale", {Parent = valLbl})
-			local function spawnParticle(valChange, isInc)
-				local p = new("TextLabel", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.new(1, -60, 0.5, 0),
-					Size = UDim2.fromOffset(60, 20),
-					Text = (isInc and "+" or "-") .. tostring(valChange),
-					Font = Enum.Font.GothamBold,
-					TextSize = 13,
-					TextColor3 = isInc and rgb(46, 220, 130) or rgb(255, 70, 90),
-					TextTransparency = 0,
-					ZIndex = 10,
-					Parent = body
-				})
-				local sc = new("UIScale", {Scale = 0.8, Parent = p})
-				tw(p, 1.0, {Position = UDim2.new(1, -60, 0.5, -35), TextTransparency = 1}, QUAD, IN)
-				tw(sc, 1.0, {Scale = 1.3}, BACK)
-				task.delay(1.0, function()
-					if p and p.Parent then p:Destroy() end
-				end)
-			end
+			
 			local function apply(v, fire, dir)
 				v = math.clamp(v, min, max)
 				if v == value then
 					if fire then
 						valLbl.Position = UDim2.new(1, -60 + (dir or 1) * 5, 0.5, 0)
-						tw(valLbl, 0.3, {Position = valBase}, BACK)
+						tw(valLbl, 0.15, {Position = valBase}, BACK)
 					end
 					return false
 				end
-				local diff = math.abs(v - value)
 				value = v
 				valLbl.Text = fmt(v)
-				valLbl.Position = UDim2.new(1, -60, 0.5, (dir or 0) * 8)
-				valLbl.TextTransparency = 0.6
-				valScale.Scale = 1.12
-				tw(valLbl, 0.22, {Position = valBase, TextTransparency = 0}, Q)
-				tw(valScale, 0.3, {Scale = 1}, BACK)
-				spawnParticle(diff, (dir or 1) > 0)
+				valLbl.Position = UDim2.new(1, -60, 0.5, (dir or 0) * 4)
+				valLbl.TextTransparency = 0.4
+				valScale.Scale = 1.08
+				tw(valLbl, 0.12, {Position = valBase, TextTransparency = 0}, Q)
+				tw(valScale, 0.15, {Scale = 1}, BACK)
 				if fire and o.Callback then task.spawn(o.Callback, v) end
 				return true
 			end
+
 			local function mkBtn(img, xoff, dir, glyph)
 				local b = new("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, xoff, 0.5, 0), Size = UDim2.fromOffset(26, 26), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 4, Parent = body}, {corner(8)})
 				bind(b, "BackgroundColor3", "Sidebar")
@@ -1567,18 +1547,19 @@ function Pingo.CreateWindow(title, version, config)
 					im = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Text = glyph, Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 5, Parent = b}, "Text")
 				end
 				b.MouseButton1Down:Connect(function()
-					tw(s, 0.1, {Scale = 0.78})
-					tw(b, 0.1, {BackgroundColor3 = T("AccentDark")})
-					tw(im, 0.1, {Rotation = dir * 18})
-					apply(value + dir * step, true, dir)
-					task.delay(0.15, function()
-						tw(s, 0.35, {Scale = 1}, BACK)
-						tw(b, 0.25, {BackgroundColor3 = T("Sidebar")})
-						tw(im, 0.35, {Rotation = 0}, BACK)
+					tw(s, 0.05, {Scale = 0.85})
+					tw(b, 0.05, {BackgroundColor3 = T("AccentDark")})
+					tw(im, 0.05, {Rotation = dir * 10})
+					apply(value + (dir * amount), true, dir)
+					task.delay(0.08, function()
+						tw(s, 0.15, {Scale = 1}, BACK)
+						tw(b, 0.15, {BackgroundColor3 = T("Sidebar")})
+						tw(im, 0.15, {Rotation = 0}, BACK)
 					end)
 				end)
 				return b
 			end
+
 			mkBtn(o.MinusIcon or ICON.Minus, -84, -1, "−")
 			mkBtn(o.PlusIcon or ICON.Plus, -10, 1, "+")
 			hover(body, body)
@@ -1589,7 +1570,7 @@ function Pingo.CreateWindow(title, version, config)
 			finish(tab, body, o, "stepper", obj, {zone})
 			return obj
 		end
-
+		
 		function tab:AddPopup(a, popupOpts, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Popup = popupOpts}, extra)
 			local body = newCard(o.Name)
