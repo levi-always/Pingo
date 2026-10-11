@@ -26,15 +26,7 @@ local GAP = 4
 local CELL_H = 64
 local HOLD_TIME = 0.8
 
-local ICON = {
-	Star = 5078542968,
-	Themes = 88003022051687,
-	Config = 137882818389597,
-	Settings = 9405931578,
-	Minus = 12338394619,
-	Plus = 12338396009,
-	Search = 6031154871,
-    Copy = 103287906385313,
+local ICON = loadstring(game:HttpGet("Https://raw.githubusercontent.com/levi-always/Pingo/refs/heads/main/src/Icons.lua"))()
 }
 
 -- ============================================================
