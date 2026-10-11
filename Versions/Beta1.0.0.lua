@@ -448,7 +448,7 @@ function Pingo.CreateWindow(title, version, config)
 	local dragArea = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Active = true, Parent = Sidebar})
 	makeDraggable(dragArea, Holder, nil, menuCanDrag)
 
-	local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
+		local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
 		new("UIListLayout", {FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
 	local titleLbl = mkText("TextLabel", {
@@ -465,6 +465,7 @@ function Pingo.CreateWindow(title, version, config)
 	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 	
+	-- تم تغيير لون الإصدار إلى Accent لكي يتغير مع الثيم
 	mkText("TextLabel", {
 		Text = version,
 		Font = Enum.Font.Gotham,
@@ -474,7 +475,7 @@ function Pingo.CreateWindow(title, version, config)
 		Size = UDim2.new(1, 0, 0, 15),
 		LayoutOrder = 2,
 		Parent = titleRow
-	}, "SubText")
+	}, "Accent")
 	
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
@@ -2564,13 +2565,23 @@ function Pingo.CreateWindow(title, version, config)
 		Pingo.SetTheme(pick)
 	end, {Description = "Surprise me"})
 
-	themeListeners[win] = function()
+		themeListeners[win] = function()
 		for tname, rs in pairs(ringList) do
 			tw(rs, 0.25, {Transparency = (tname == currentTheme) and 0 or 1})
 		end
 		if themeDD and themeDD.Get and themeDD:Get() ~= currentTheme then themeDD:Set(currentTheme, false) end
+		
+		-- تحديث ألوان أزرار التبويبات والتبويب المفتوح حالياً بناءً على الثيم الجديد
+		for _, st in ipairs(win.SideTabs) do
+			for _, t in ipairs(tabsOf(st)) do
+				if t.Button then
+					local isDisplay = (st.Display == t)
+					bind(t.Button, "TextColor3", isDisplay and "Accent" or "SubText", true)
+				end
+			end
+		end
 	end
-
+	
 	local General = createTab(SettingsST, "General", {System = true})
 	win.SizeStepper = General:AddStepper("Menu Size", 60, 140, 100, 10, function(v) win:SetSizeMultiplier(v / 100) end, {
 		MinusIcon = config.MinusIcon or ICON.Minus,
