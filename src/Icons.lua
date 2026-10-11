@@ -6,6 +6,14 @@ local IconModule = {
 
 	Icons = {  
 		["lucide"] = {
+            ["star"] = "5078542968",
+			["themes"] = "88003022051687",
+			["config"] = "137882818389597",
+			["settings"] = "9405931578",
+			["minus"] = "12338394619",
+			["plus"] = "12338396009",
+			["search"] = "6031154871",
+			["copy"] = "103287906385313",
             ["a-arrow-down"] = "rbxassetid://92867583610071",
             ["a-arrow-up"] = "rbxassetid://132318504999733",
             ["a-large-small"] = "rbxassetid://111491496660216",
