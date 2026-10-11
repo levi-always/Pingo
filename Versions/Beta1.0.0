@@ -475,7 +475,44 @@ function Pingo.CreateWindow(title, version, config)
 		LayoutOrder = 2,
 		Parent = titleRow
 	}, "SubText")
+
+	local nameContainer = new("Frame", {Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = 1, Parent = titleRow})
 	
+	local titleLbl = mkText("TextLabel", {
+		Text = title,
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Size = UDim2.new(1, -38, 1, 0),
+		Parent = nameContainer
+	}, "Accent")
+	
+	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
+	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
+
+	local newTag = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(32, 16),
+		BackgroundTransparency = 1,
+		Parent = nameContainer
+	}, {
+		new("UICorner", {CornerRadius = UDim.new(0, 4)}),
+		new("UIStroke", {Thickness = 1, Color = T("Stroke")})
+	})
+	
+	bind(newTag.UIStroke, "Color", "Stroke")
+
+	mkText("TextLabel", {
+		Text = "NEW",
+		Font = Enum.Font.GothamBold,
+		TextSize = 9,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		Size = UDim2.fromScale(1, 1),
+		Parent = newTag
+	}, "SubText")
 
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
