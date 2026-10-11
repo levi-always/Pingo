@@ -448,56 +448,56 @@ function Pingo.CreateWindow(title, version, config)
 	local dragArea = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Active = true, Parent = Sidebar})
 	makeDraggable(dragArea, Holder, nil, menuCanDrag)
 
-	local titleRow = new("Frame", {Position = UDim2.fromOffset(16, 12), Size = UDim2.new(1, -32, 0, 37), BackgroundTransparency = 1, Parent = Sidebar})
+local titleRow = new("Frame", {Position = UDim2.fromOffset(16, 12), Size = UDim2.new(1, -32, 0, 37), BackgroundTransparency = 1, Parent = Sidebar})
 
-	local titleLbl = mkText("TextLabel", {
-		Text = title,
-		Font = Enum.Font.GothamBold,
-		TextSize = 16,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.new(1, -78, 0, 22),
-		LayoutOrder = 1,
-		Parent = titleRow
-	}, "Accent")
+local titleLbl = mkText("TextLabel", {
+	Text = title,
+	Font = Enum.Font.GothamBold,
+	TextSize = 16,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+	Size = UDim2.new(1, -78, 0, 22),
+	Parent = titleRow
+}, "Accent")
 
-	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
-	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
+local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
+TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 
-	local newTag = new("Frame", {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -70, 0, 3),
-		Size = UDim2.fromOffset(32, 16),
-		BackgroundTransparency = 1,
-		Parent = titleRow
-	}, {
-		new("UICorner", {CornerRadius = UDim.new(0, 4)}),
-		new("UIStroke", {Thickness = 1})
-	})
-	
-	bind(newTag.UIStroke, "Color", "Stroke")
+local newTag = new("Frame", {
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -70, 0, 3),
+	Size = UDim2.fromOffset(32, 16),
+	BackgroundTransparency = 1,
+	Parent = titleRow
+}, {
+	new("UICorner", {CornerRadius = UDim.new(0, 4)}),
+	new("UIStroke", {Thickness = 1})
+})
 
-	mkText("TextLabel", {
-		Text = "NEW",
-		Font = Enum.Font.GothamBold,
-		TextSize = 9,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		TextYAlignment = Enum.TextYAlignment.Center,
-		Size = UDim2.fromScale(1, 1),
-		Parent = newTag
-	}, "SubText")
+bind(newTag.UIStroke, "Color", "Stroke")
 
-	mkText("TextLabel", {
-		Text = version,
-		Font = Enum.Font.Gotham,
-		TextSize = 11,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.new(1, 0, 0, 15),
-		LayoutOrder = 2,
-		Parent = titleRow
-	}, "SubText")
-	
+mkText("TextLabel", {
+	Text = "NEW",
+	Font = Enum.Font.GothamBold,
+	TextSize = 9,
+	TextXAlignment = Enum.TextXAlignment.Center,
+	TextYAlignment = Enum.TextYAlignment.Center,
+	Size = UDim2.fromScale(1, 1),
+	Parent = newTag
+}, "SubText")
+
+-- تم إضافة Position هنا ليظهر رقم الإصدار تحت العنوان مباشرة بدون تداخل
+mkText("TextLabel", {
+	Text = version,
+	Font = Enum.Font.Gotham,
+	TextSize = 11,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextTruncate = Enum.TextTruncate.AtEnd,
+	Position = UDim2.fromOffset(0, 22),
+	Size = UDim2.new(1, 0, 0, 15),
+	Parent = titleRow
+}, "SubText")
+
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
@@ -595,9 +595,9 @@ function Pingo.CreateWindow(title, version, config)
 			if i > 16 then break end
 			local body = outer:FindFirstChild("Body")
 			if body then
-				body.Position = UDim2.new(0.5, -30, 0.5, 0)
-				task.delay((i - 1) * 0.025, function()
-					if body.Parent then tw(body, 0.4, {Position = UDim2.fromScale(0.5, 0.5)}, Q) end
+				body.Position = UDim2.new(0.5, 0, 0.5, 18)
+				task.delay((i - 1) * 0.03, function()
+					if body.Parent then tw(body, 0.5, {Position = UDim2.fromScale(0.5, 0.5)}, Q) end
 				end)
 			end
 		end
@@ -610,8 +610,8 @@ function Pingo.CreateWindow(title, version, config)
 		g.Position = UDim2.fromOffset(dx * 46, dy * 30)
 		g.GroupTransparency = 1
 		g.Visible = true
-		tw(g, 0.35, {Position = UDim2.new()}, Q)
-		tw(g, 0.25, {GroupTransparency = 0})
+		tw(g, 0.45, {Position = UDim2.new()}, Q)
+		tw(g, 0.32, {GroupTransparency = 0})
 		playIn(tab)
 	end
 
@@ -621,8 +621,8 @@ function Pingo.CreateWindow(title, version, config)
 		tab.HideToken = (tab.HideToken or 0) + 1
 		local my = tab.HideToken
 		g.ZIndex = 1
-		tw(g, 0.18, {GroupTransparency = 1, Position = UDim2.fromOffset(-dx * 25, -dy * 15)}, QUAD, IN)
-		task.delay(0.2, function()
+		tw(g, 0.2, {GroupTransparency = 1, Position = UDim2.fromOffset(-dx * 30, -dy * 20)}, QUAD, IN)
+		task.delay(0.22, function()
 			if tab.HideToken == my then g.Visible = false end
 		end)
 	end
@@ -812,7 +812,7 @@ function Pingo.CreateWindow(title, version, config)
 	local function newCard(name)
 		win.Counter = win.Counter + 1
 		local outer = new("Frame", {Name = tostring(name), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
-		local body = new("Frame", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 30, 0.5, 0), Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = outer}, {corner(8)})
+		local body = new("Frame", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = outer}, {corner(8)})
 		bind(body, "BackgroundColor3", "Card")
 		local st = new("UIStroke", {Name = "CardStroke", Thickness = 1, Transparency = 0.35, Parent = body})
 		bind(st, "Color", "Stroke")
@@ -832,7 +832,7 @@ function Pingo.CreateWindow(title, version, config)
 		src.MouseLeave:Connect(function()
 			tw(shine, 0.2, {BackgroundTransparency = 1})
 			tw(stroke, 0.25, {Color = T("Stroke"), Transparency = 0.35})
-			tw(body, 0.3, {Position = UDim2.new(0.5, 0, 0.5, 0)}, Q)
+			tw(body, 0.3, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
 		end)
 	end
 
@@ -1522,10 +1522,10 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-		function tab:AddStepper(a, mn, mx, default, step, callback, extra)
+				function tab:AddStepper(a, mn, mx, default, step, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Min = mn, Max = mx, Default = default, Step = step, Callback = callback}, extra)
 			local min, max = o.Min or 0, o.Max or 100
-			local amount = o.Amount or 10
+			local amount = o.Amount or 10 -- يمكنك تحديد قيمة amount هنا أو تمريرها عبر الـ extra
 			local fmt = o.Format or function(v) return tostring(v) end
 			local default0 = math.clamp(o.Default or min, min, max)
 			local value = default0
@@ -1937,7 +1937,7 @@ function Pingo.CreateWindow(title, version, config)
 		return math.ceil(TextService:GetTextSize(spec.Text, 13, Enum.Font.GothamBold, Vector2.new(300, 34)).X + 36 + (spec.Icon and 22 or 0))
 	end
 	local hw, uw, BAR_GAP = pillW(hideSpec), pillW(unloadSpec), 10
-	local Bar = new("Frame", {Name = "BottomBar", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 20), Size = UDim2.fromOffset(hw + BAR_GAP + uw, 34), BackgroundTransparency = 1, Parent = Holder})
+	local Bar = new("Frame", {Name = "BottomBar", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 12), Size = UDim2.fromOffset(hw + BAR_GAP + uw, 34), BackgroundTransparency = 1, Parent = Holder})
 	local barScale = new("UIScale", {Parent = Bar})
 	local hideBtn = pill(Bar, hideSpec, {Size = UDim2.fromOffset(hw, 34), Radius = 9, TextSize = 13})
 	local glow = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, hw + BAR_GAP + uw / 2, 0.5, 0), Size = UDim2.fromOffset(uw + 14, 48), BackgroundTransparency = 0.82, BorderSizePixel = 0, Parent = Bar}, {corner(15)})
@@ -1966,34 +1966,30 @@ function Pingo.CreateWindow(title, version, config)
 		tw(iconPop, 0.45, {Scale = 1}, BACK)
 		if state then
 			Holder.Visible = true
-			openScale.Scale = 0.92
+			openScale.Scale = 0.9
 			Main.GroupTransparency = 1
-			Sidebar.Position = UDim2.fromOffset(-35, 0)
-			Content.Position = UDim2.fromOffset(205, 0)
-			tw(openScale, 0.35, {Scale = 1}, BACK)
-			tw(Main, 0.22, {GroupTransparency = 0})
-			Main.Position = UDim2.new(0.5, 0, 0.5, 15)
-			tw(Main, 0.4, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
-			Bar.Position = UDim2.new(0.5, 0, 1, 8)
-			barScale.Scale = 0.9
-			task.delay(0.08, function()
-				tw(Bar, 0.35, {Position = UDim2.new(0.5, 0, 1, 12)}, Q)
-				tw(barScale, 0.35, {Scale = 1}, BACK)
+			Sidebar.Position = UDim2.fromOffset(-40, 0)
+			Content.Position = UDim2.fromOffset(210, 0)
+			tw(openScale, 0.5, {Scale = 1}, BACK)
+			tw(Main, 0.3, {GroupTransparency = 0})
+			Main.Position = UDim2.new(0.5, 0, 0.5, 24)
+			tw(Main, 0.6, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
+			Bar.Position = UDim2.new(0.5, 0, 1, -8)
+			barScale.Scale = 0.85
+			task.delay(0.12, function()
+				tw(Bar, 0.55, {Position = UDim2.new(0.5, 0, 1, 12)}, Q)
+				tw(barScale, 0.5, {Scale = 1}, BACK)
 			end)
-			tw(Sidebar, 0.4, {Position = UDim2.fromOffset(0, 0)}, Q)
-			tw(Content, 0.4, {Position = UDim2.fromOffset(170, 0)}, Q)
+			tw(Sidebar, 0.6, {Position = UDim2.fromOffset(0, 0)}, Q)
+			tw(Content, 0.6, {Position = UDim2.fromOffset(170, 0)}, Q)
 			local t = win.CurrentTab
 			if t then playIn(t) end
 		else
 			closeMenu()
-			tw(Sidebar, 0.25, {Position = UDim2.fromOffset(-35, 0)}, QUAD, IN)
-			tw(Content, 0.25, {Position = UDim2.fromOffset(205, 0)}, QUAD, IN)
-			tw(Bar, 0.2, {Position = UDim2.new(0.5, 0, 1, 20)}, QUAD, IN)
-			tw(barScale, 0.2, {Scale = 0.9}, QUAD, IN)
-			tw(openScale, 0.22, {Scale = 0.92}, QUAD, IN)
-			tw(Main, 0.22, {Position = UDim2.new(0.5, 0, 0.5, 12)}, QUAD, IN)
-			tw(Main, 0.18, {GroupTransparency = 1})
-			task.delay(0.25, function()
+			tw(openScale, 0.25, {Scale = 0.9}, QUAD, IN)
+			tw(Main, 0.25, {Position = UDim2.new(0.5, 0, 0.5, 14)}, QUAD, IN)
+			tw(Main, 0.22, {GroupTransparency = 1})
+			task.delay(0.26, function()
 				if token == my then Holder.Visible = false end
 			end)
 		end
