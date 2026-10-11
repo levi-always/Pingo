@@ -448,23 +448,43 @@ function Pingo.CreateWindow(title, version, config)
 	local dragArea = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Active = true, Parent = Sidebar})
 	makeDraggable(dragArea, Holder, nil, menuCanDrag)
 
-		local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
-		new("UIListLayout", {FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder}),
-	})
 	local titleLbl = mkText("TextLabel", {
 		Text = title,
 		Font = Enum.Font.GothamBold,
 		TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.new(1, 0, 0, 22),
+		Size = UDim2.new(1, -78, 0, 22),
 		LayoutOrder = 1,
 		Parent = titleRow
 	}, "Accent")
-	
+
 	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
+
+	local newTag = new("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -70, 0, 3),
+		Size = UDim2.fromOffset(32, 16),
+		BackgroundTransparency = 1,
+		Parent = titleRow
+	}, {
+		new("UICorner", {CornerRadius = UDim.new(0, 4)}),
+		new("UIStroke", {Thickness = 1})
+	})
 	
+	bind(newTag.UIStroke, "Color", "Stroke")
+
+	mkText("TextLabel", {
+		Text = "NEW",
+		Font = Enum.Font.GothamBold,
+		TextSize = 9,
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center,
+		Size = UDim2.fromScale(1, 1),
+		Parent = newTag
+	}, "SubText")
+
 	mkText("TextLabel", {
 		Text = version,
 		Font = Enum.Font.Gotham,
@@ -476,7 +496,6 @@ function Pingo.CreateWindow(title, version, config)
 		Parent = titleRow
 	}, "SubText")
 	
-
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
