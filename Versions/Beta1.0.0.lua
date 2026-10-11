@@ -456,37 +456,13 @@ local titleLbl = mkText("TextLabel", {
 	TextSize = 16,
 	TextXAlignment = Enum.TextXAlignment.Left,
 	TextTruncate = Enum.TextTruncate.AtEnd,
-	Size = UDim2.new(1, -78, 0, 22),
+	Size = UDim2.new(1, 0, 0, 22),
 	Parent = titleRow
 }, "Accent")
 
 local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 
-local newTag = new("Frame", {
-	AnchorPoint = Vector2.new(1, 0),
-	Position = UDim2.new(1, -70, 0, 3),
-	Size = UDim2.fromOffset(32, 16),
-	BackgroundTransparency = 1,
-	Parent = titleRow
-}, {
-	new("UICorner", {CornerRadius = UDim.new(0, 4)}),
-	new("UIStroke", {Thickness = 1})
-})
-
-bind(newTag.UIStroke, "Color", "Stroke")
-
-mkText("TextLabel", {
-	Text = "NEW",
-	Font = Enum.Font.GothamBold,
-	TextSize = 9,
-	TextXAlignment = Enum.TextXAlignment.Center,
-	TextYAlignment = Enum.TextYAlignment.Center,
-	Size = UDim2.fromScale(1, 1),
-	Parent = newTag
-}, "SubText")
-
--- تم إضافة Position هنا ليظهر رقم الإصدار تحت العنوان مباشرة بدون تداخل
 mkText("TextLabel", {
 	Text = version,
 	Font = Enum.Font.Gotham,
@@ -497,7 +473,7 @@ mkText("TextLabel", {
 	Size = UDim2.new(1, 0, 0, 15),
 	Parent = titleRow
 }, "SubText")
-
+	
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
