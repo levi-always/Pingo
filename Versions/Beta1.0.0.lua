@@ -1,4 +1,4 @@
---[[ Pingo UI Library | v1.0.0 (Remake - Vertical & Sections & Autoscaling) --------------------------
+--[[ Pingo UI Library | v1.0.0 (Sections Kept, Autoscaling Reverted) -------------------------------
 HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
 Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
 Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
@@ -203,7 +203,6 @@ local function mkText(class, props, key)
 	props.BackgroundTransparency = props.BackgroundTransparency or 1
 	props.BorderSizePixel = 0
 	props.Font = props.Font or Enum.Font.GothamMedium
-	props.TextScaled = props.TextScaled ~= false -- تفعيل التكيف التلقائي للنصوص (Autoscale) افتراضياً
 	local o = new(class, props)
 	bind(o, "TextColor3", key or "Text")
 	return o
