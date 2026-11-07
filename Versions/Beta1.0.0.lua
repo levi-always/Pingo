@@ -1,10 +1,8 @@
---[[ Pingo UI Library | v1.0.0 (Sections Kept, Autoscaling Reverted) -------------------------------
+--[[ Pingo UI Library | v1.0.0 (Clean Sidebar & Enhanced Sections) -------------------------------
 HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
 Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
 Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
 Floating -> Lock|Move / Resize / Hide
-Profile -> Auto-Load / Load / Delete / Rename
-Built-in SideTabs (bottom): Themes, Config, Settings
 -------------------------------------------------------------------------------------------------- ]]
 
 local Pingo = {Version = "1.0.0", Name = "Pingo", TintIcons = true}
@@ -27,9 +25,6 @@ local HOLD_TIME = 0.8
 
 local ICON = {
 	Star = 5078542968,
-	Themes = 88003022051687,
-	Config = 137882818389597,
-	Settings = 9405931578,
 	Minus = 12338394619,
 	Plus = 12338396009,
 	Search = 6031154871,
@@ -457,11 +452,7 @@ function Pingo.CreateWindow(title, version, config)
 		Parent = titleRow
 	}, "Accent")
 
-	local navH = H - 62
-	local SYS_TOP = navH - 3 * 42 - 8
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
-	local navLine = new("Frame", {Position = UDim2.fromOffset(16, SYS_TOP - 6), Size = UDim2.new(1, -33, 0, 1), BorderSizePixel = 0, Parent = Nav})
-	bind(navLine, "BackgroundColor3", "Stroke")
 
 	local Pill = new("Frame", {Name = "Pill", Position = UDim2.fromOffset(10, 2), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Visible = false, Parent = Nav}, {corner(9)})
 	grad({"AccentDark", "Accent2Dark"}, Pill)
@@ -1236,7 +1227,7 @@ function Pingo.CreateWindow(title, version, config)
 		end
 
 		local page = new("ScrollingFrame", {Name = "Page", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Parent = group}, {
-			new("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8)}),
+			new("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 12)}),
 			layout,
 		})
 		bind(page, "ScrollBarImageColor3", "SubText")
@@ -1266,19 +1257,20 @@ function Pingo.CreateWindow(title, version, config)
 		if win.ActiveSideTab == st and not st.ActiveTab then selectTab(tab) end
 
 		-- ==========================================================
-		-- ADD SECTION (قسم جديد مع تباعد من الأعلى والأسفل)
+		-- ADD SECTION (مع تباعد من الأعلى والأسفل مثل الصورة)
 		-- ==========================================================
 		function tab:AddSection(name)
 			win.Counter = win.Counter + 1
-			local outer = new("Frame", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
+			-- زيادة الارتفاع وإضافة مسافة علوية لتوفير تباعد مثالي (Padding)
+			local outer = new("Frame", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
 			local lbl = mkText("TextLabel", {
 				Text = string.upper(tostring(name)),
 				Font = Enum.Font.GothamBold,
-				TextSize = 12,
+				TextSize = 13,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Center,
-				Position = UDim2.fromOffset(4, 12),
-				Size = UDim2.new(1, -8, 1, -12),
+				Position = UDim2.fromOffset(4, 20),
+				Size = UDim2.new(1, -8, 1, -20),
 				Parent = outer,
 			}, "Accent")
 			local rec = {Name = tostring(name), Kind = "section", Tab = tab, Body = outer, Outer = outer, BaseOrder = outer.LayoutOrder}
@@ -1583,170 +1575,6 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-		function tab:AddPopup(a, popupOpts, extra)
-			local o = type(a) == "table" and a or merge({Name = a, Popup = popupOpts}, extra)
-			local body = newCard(o.Name)
-			header(body, o, 0, 40)
-			mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, -2), Size = UDim2.fromOffset(18, 24), Text = "›", Font = Enum.Font.GothamBold, TextSize = 26, Parent = body}, "SubText")
-			local hit = hitButton(body)
-			hover(body, hit)
-			pressFx(body, hit)
-			local function show()
-				local p = {}
-				for k, v in pairs(o.Popup or {}) do p[k] = v end
-				p.Title = p.Title or o.Name
-				return win:Popup(p)
-			end
-			hit.MouseButton1Click:Connect(function()
-				if hold.consumed then return end
-				show()
-			end)
-			local obj = {Card = body, Show = show}
-			finish(tab, body, o, "popup", obj, {hit})
-			return obj
-		end
-
-		function tab:AddCode(a, code, extra)
-			local o = type(a) == "table" and a or merge({Name = a, Code = code}, extra)
-			local body = newCard(o.Name or "Code")
-			local nameLbl = header(body, o, 0, 52)
-			local copyBtn = new("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0, 26), Size = UDim2.fromOffset(28, 28), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 4, Parent = body}, {corner(7)})
-			bind(copyBtn, "BackgroundColor3", "Off")
-			local copyIcon = new("ImageLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = icon(o.CopyIcon or ICON.Copy or ICON.Star), ZIndex = 5, Parent = copyBtn})
-			bind(copyIcon, "ImageColor3", "Text")
-			local codeBox = new("Frame", {Position = UDim2.fromOffset(10, 56), Size = UDim2.new(1, -20, 1, -66), BorderSizePixel = 0, ClipsDescendants = true, Parent = body}, {corner(8)})
-			bind(codeBox, "BackgroundColor3", "Sidebar")
-			local codeScroll = new("ScrollingFrame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.XY, CanvasSize = UDim2.new(), Parent = codeBox}, {
-				new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8)}),
-			})
-			bind(codeScroll, "ScrollBarImageColor3", "SubText")
-			local KEYWORDS = {["local"]=1,["function"]=1,["end"]=1,["if"]=1,["then"]=1,["else"]=1,["elseif"]=1,["for"]=1,["while"]=1,["do"]=1,["return"]=1,["in"]=1,["and"]=1,["or"]=1,["not"]=1,["nil"]=1,["true"]=1,["false"]=1,["repeat"]=1,["until"]=1,["break"]=1}
-			local function colorize(line)
-				local out, i, n = {}, 1, #line
-				while i <= n do
-					local c = line:sub(i, i)
-					local rest = line:sub(i)
-					local piece, key
-					if rest:sub(1, 2) == "--" then
-						piece, key = rest, "SubText"
-					elseif c == '"' or c == "'" then
-						local j = i + 1
-						while j <= n and line:sub(j, j) ~= c do
-							if line:sub(j, j) == "\\" then j = j + 1 end
-							j = j + 1
-						end
-						piece, key = line:sub(i, j), "Accent2"
-					elseif c:match("%d") then
-						piece = rest:match("^%d+%.?%d*") or c
-						key = "Accent"
-					elseif c:match("[%a_]") then
-						local word = rest:match("^[%a_][%w_]*")
-						piece = word
-						key = KEYWORDS[word] and "Accent" or (rest:sub(#word + 1, #word + 1) == "(" and "Text" or "Text")
-					else
-						piece, key = c, "SubText"
-					end
-					piece = piece or c
-					table.insert(out, {piece, key})
-					i = i + #piece
-				end
-				return out
-			end
-			local codeLines = {}
-			local function render(src)
-				for _, l in ipairs(codeLines) do l:Destroy() end
-				codeLines = {}
-				local y = 0
-				for lineNo, line in ipairs(string.split(tostring(src), "\n")) do
-					local lbl = new("TextLabel", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 16), Text = "", Font = Enum.Font.Code, TextSize = 13, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3, Parent = codeScroll})
-					local rich = {}
-					for _, seg in ipairs(colorize(line)) do
-						local col = T(seg[2]) or T("Text")
-						table.insert(rich, string.format('<font color="#%02X%02X%02X">%s</font>', col.R * 255, col.G * 255, col.B * 255, (seg[1]:gsub("<", "&lt;"):gsub(">", "&gt;"))))
-					end
-					lbl.RichText = true
-					lbl.Text = table.concat(rich)
-					table.insert(codeLines, lbl)
-					y = y + 16
-				end
-				codeScroll.CanvasSize = UDim2.fromOffset(0, y + 16)
-			end
-			render(o.Code or "")
-			local obj = {Card = body, Listeners = {}}
-			function obj:SetCode(src) render(src) end
-			function obj:Get() return o.Code end
-			copyBtn.MouseButton1Click:Connect(function()
-				local text = tostring(o.Code or "")
-				if type(setclipboard) == "function" then setclipboard(text) end
-				tw(copyIcon, 0.2, {Rotation = 360}, Q)
-				if win and win.Notify then win:Notify("Copied", "Copied to clipboard.", 2) end
-			end)
-			hover(body, body)
-			finish(tab, body, o, "code", obj, {copyBtn})
-			return obj
-		end
-
-		function tab:AddInfoPage(a, spec, extra)
-			local o = type(a) == "table" and a or merge({Name = a, Info = spec}, extra)
-			local info = o.Info or {}
-			local body = newCard(o.Name)
-			header(body, o, 0, 40)
-			mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, -2), Size = UDim2.fromOffset(18, 24), Text = "›", Font = Enum.Font.GothamBold, TextSize = 26, Parent = body}, "SubText")
-			local hit = hitButton(body)
-			hover(body, hit)
-			pressFx(body, hit)
-			local function show()
-				local overlay = new("TextButton", {Name = "InfoOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 60, Parent = Main})
-				local dlg = new("CanvasGroup", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.86, 0, 0.8, 0), BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 61, Parent = overlay}, {corner(14)})
-				bind(dlg, "BackgroundColor3", "Sidebar")
-				local dst = new("UIStroke", {Thickness = 1.5, Transparency = 0.35, Parent = dlg})
-				bind(dst, "Color", "Accent")
-				local back = pill(dlg, {Text = "Back", Icon = o.BackIcon}, {Size = UDim2.fromOffset(74, 30), Position = UDim2.fromOffset(12, 12), Radius = 8, TextSize = 12})
-				back.ZIndex = 62
-				local function close()
-					tw(dlg, 0.2, {GroupTransparency = 1})
-					task.delay(0.22, function() unbindTree(overlay); overlay:Destroy() end)
-				end
-				back.MouseButton1Click:Connect(close)
-				local ix = 12
-				if info.Icon then
-					ix = 96
-					local img = new("ImageLabel", {Image = icon(info.Icon), Position = UDim2.fromOffset(14, 52), Size = UDim2.fromOffset(64, 64), BackgroundTransparency = 1, ZIndex = 62, Parent = dlg}, {corner(10)})
-					if info.Tint then bind(img, "ImageColor3", "Accent") end
-				end
-				mkText("TextLabel", {Text = tostring(info.Title or o.Name), Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(ix, 56), Size = UDim2.new(1, -ix - 14, 0, 26), ZIndex = 62, Parent = dlg})
-				mkText("TextLabel", {Text = tostring(info.Subtitle or ""), Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(ix, 84), Size = UDim2.new(1, -ix - 14, 0, 16), ZIndex = 62, Parent = dlg}, "SubText")
-				local scroll = new("ScrollingFrame", {Position = UDim2.fromOffset(14, 130), Size = UDim2.new(1, -28, 1, -(130 + 60)), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 62, Parent = dlg})
-				bind(scroll, "ScrollBarImageColor3", "SubText")
-				local txt = mkText("TextLabel", {Text = tostring(info.Text or ""), Font = Enum.Font.Gotham, TextSize = 13, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, AutomaticSize = Enum.AutomaticSize.Y, Size = UDim2.new(1, -6, 0, 0), ZIndex = 62, Parent = scroll}, "SubText")
-				local buttons = info.Buttons or {}
-				if #buttons > 0 then
-					local bar = new("Frame", {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12), Size = UDim2.new(1, -28, 0, 34), BackgroundTransparency = 1, ZIndex = 62, Parent = dlg}, {
-						new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder}),
-					})
-					for i, spec2 in ipairs(buttons) do
-						local pb = pill(bar, {Text = spec2.Text, Icon = spec2.Icon, Style = spec2.Style or "Default"}, {Size = UDim2.new(1 / #buttons, -8, 1, 0), Radius = 9, TextSize = 12})
-						pb.LayoutOrder = i
-						pb.ZIndex = 63
-						pb.MouseButton1Click:Connect(function()
-							if spec2.Callback then task.spawn(spec2.Callback) end
-							if spec2.Close ~= false then close() end
-						end)
-					end
-				end
-				dlg.Position = UDim2.fromScale(0.5, 0.56)
-				tw(dlg, 0.35, {GroupTransparency = 0})
-				tw(dlg, 0.5, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
-			end
-			hit.MouseButton1Click:Connect(function()
-				if hold.consumed then return end
-				show()
-			end)
-			local obj = {Card = body, Show = show}
-			finish(tab, body, o, "info", obj, {hit})
-			return obj
-		end
-
 		function tab:AddDropdown(a, options, default, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Options = options, Default = default, Callback = callback}, extra)
 			local dd = {Name = tostring(o.Name), Options = o.Options or {}, Max = (o.Max == nil) and 1 or o.Max, Placeholder = o.Placeholder or "Select...", Selected = {}, Swatches = o.Swatches, Callback = o.Callback}
@@ -1831,16 +1659,12 @@ function Pingo.CreateWindow(title, version, config)
 	end
 
 	local topCount = 0
-	local function createSideTab(name, iconId, slot)
-		local st = {Name = name, Tabs = {}, System = slot ~= nil, HiddenCount = 0}
-		if slot then
-			st.Y = SYS_TOP + (slot - 1) * 42
-			st.Order = 1000 + slot
-		else
-			topCount = topCount + 1
-			st.Y = 2 + (topCount - 1) * 42
-			st.Order = topCount
-		end
+	local function createSideTab(name, iconId)
+		local st = {Name = name, Tabs = {}, HiddenCount = 0}
+		topCount = topCount + 1
+		st.Y = 2 + (topCount - 1) * 42
+		st.Order = topCount
+
 		local btn = new("TextButton", {Name = name, Position = UDim2.fromOffset(10, st.Y), Size = UDim2.new(1, -20, 0, 38), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2, Parent = Nav})
 		st.Button = btn
 		local pad = 14
@@ -1869,8 +1693,7 @@ function Pingo.CreateWindow(title, version, config)
 	end
 
 	function win:CreateSideTab(name, iconId)
-		if topCount >= 5 then warn("[Pingo] Only 5 custom SideTabs fit in the sidebar.") end
-		local st = createSideTab(name, iconId, nil)
+		local st = createSideTab(name, iconId)
 		if not win.UserSelected then
 			win.UserSelected = true
 			selectSideTab(st)
@@ -2355,461 +2178,6 @@ function Pingo.CreateWindow(title, version, config)
 		tw(panel, 0.3, {GroupTransparency = 0})
 	end
 
-	local FS = {}
-	do
-		local has = type(writefile) == "function" and type(readfile) == "function" and type(isfile) == "function"
-			and type(isfolder) == "function" and type(makefolder) == "function" and type(listfiles) == "function" and type(delfile) == "function"
-		local root = "Pingo"
-		local dir = root .. "/" .. sanitize(title)
-		local cdir = dir .. "/configs"
-		local mem = {files = {}, auto = nil}
-		FS.Supported = has
-		FS.Path = has and cdir or "(memory only)"
-		local function ensure()
-			if not has then return end
-			pcall(function()
-				for _, p in ipairs({root, dir, cdir}) do
-					if not isfolder(p) then makefolder(p) end
-				end
-			end)
-		end
-		function FS.list()
-			ensure()
-			local out = {}
-			if has then
-				local ok, files = pcall(listfiles, cdir)
-				if ok and type(files) == "table" then
-					for _, f in ipairs(files) do
-						local n = tostring(f):match("([^/\\]+)%.json$")
-						if n then out[#out + 1] = n end
-					end
-				end
-			else
-				for n in pairs(mem.files) do out[#out + 1] = n end
-			end
-			table.sort(out, function(a, b) return a:lower() < b:lower() end)
-			return out
-		end
-		function FS.exists(n)
-			ensure()
-			if has then
-				local ok, r = pcall(isfile, cdir .. "/" .. n .. ".json")
-				return ok and r == true
-			end
-			return mem.files[n] ~= nil
-		end
-		function FS.write(n, data)
-			ensure()
-			if has then
-				return (pcall(writefile, cdir .. "/" .. n .. ".json", data))
-			end
-			mem.files[n] = data
-			return true
-		end
-		function FS.read(n)
-			if has then
-				local ok, r = pcall(readfile, cdir .. "/" .. n .. ".json")
-				if ok then return r end
-				return nil
-			end
-			return mem.files[n]
-		end
-		function FS.delete(n)
-			if has then pcall(delfile, cdir .. "/" .. n .. ".json") else mem.files[n] = nil end
-		end
-		function FS.getAuto()
-			if has then
-				local ok, r = pcall(function()
-					if isfile(dir .. "/autoload.txt") then return readfile(dir .. "/autoload.txt") end
-				end)
-				if ok and type(r) == "string" and r ~= "" then return r end
-				return nil
-			end
-			return mem.auto
-		end
-		function FS.setAuto(n)
-			if has then
-				pcall(function()
-					ensure()
-					if n then
-						writefile(dir .. "/autoload.txt", n)
-					elseif isfile(dir .. "/autoload.txt") then
-						delfile(dir .. "/autoload.txt")
-					end
-				end)
-			else
-				mem.auto = n
-			end
-		end
-	end
-
-	local STATEFUL = {toggle = true, slider = true, stepper = true, textbox = true, dropdown = true}
-	local function collectState()
-		local s = {v = 1, theme = currentTheme, saved = os.time(), menu = {size = math.floor(win.SizeMul * 100 + 0.5), locked = win.Locked, notify = win.NotifyEnabled, reduce = win.ReduceMotion}, tabs = {}, elements = {}, floating = {}}
-		for id, tab in pairs(win.TabRegistry) do
-			if tab.Fav or tab.Hidden then
-				s.tabs[id] = {fav = tab.Fav or nil, hidden = tab.Hidden or nil, order = tab.Fav and tab.FavOrder or nil}
-			end
-		end
-		for id, rec in pairs(win.Registry) do
-			local d = {}
-			local o = rec.Obj
-			if STATEFUL[rec.Kind] and o then
-				if rec.Kind == "dropdown" then d.value = o:GetList() else d.value = o:Get() end
-			end
-			if rec.Fav then d.fav = true; d.order = rec.FavOrder end
-			if rec.Hidden then d.hidden = true end
-			if next(d) ~= nil then s.elements[id] = d end
-			if rec.Float then s.floating[id] = rec.Float.Export() end
-		end
-		return s
-	end
-
-	local function applyState(st)
-		if type(st) ~= "table" then return false end
-		if st.theme and THEMES[st.theme] then Pingo.SetTheme(st.theme) end
-		local m = st.menu or {}
-		if m.size and win.SizeStepper then win.SizeStepper:Set(m.size) end
-		if m.locked ~= nil and win.LockToggle then win.LockToggle:Set(m.locked == true) end
-		if m.notify ~= nil and win.NotifyToggle then win.NotifyToggle:Set(m.notify == true) end
-		if m.reduce ~= nil and win.MotionToggle then win.MotionToggle:Set(m.reduce == true) end
-		local tabs = st.tabs or {}
-		for id, tab in pairs(win.TabRegistry) do
-			local d = tabs[id] or {}
-			setTabHidden(tab, d.hidden == true)
-			setTabFav(tab, d.fav == true)
-			if d.fav and d.order then
-				tab.FavOrder = d.order
-				if d.order > win.FavCounter then win.FavCounter = d.order end
-			end
-		end
-		for _, sd in ipairs(win.SideTabs) do layoutTabs(sd, true) end
-		local els = st.elements or {}
-		for id, rec in pairs(win.Registry) do
-			local d = els[id] or {}
-			setElementHidden(rec, d.hidden == true, true)
-			setElementFav(rec, d.fav == true)
-			if d.fav and d.order then
-				rec.FavOrder = d.order
-				rec.Outer.LayoutOrder = -(10000 + d.order)
-				if d.order > win.FavCounter then win.FavCounter = d.order end
-			end
-			if STATEFUL[rec.Kind] and d.value ~= nil and rec.Obj then
-				pcall(function() rec.Obj:Set(d.value, true) end)
-			end
-		end
-		local fls = st.floating or {}
-		for id, rec in pairs(win.Registry) do
-			if fls[id] then
-				if rec.Float then removeFloating(rec, true) end
-				createFloating(rec, fls[id])
-			elseif rec.Float then
-				removeFloating(rec)
-			end
-		end
-		return true
-	end
-
-	local function readProfile(name)
-		local raw = FS.read(name)
-		if not raw then return nil end
-		local ok, data = pcall(function() return HttpService:JSONDecode(raw) end)
-		if ok and type(data) == "table" then return data end
-		return nil
-	end
-
-	function win:ListConfigs() return FS.list() end
-	function win:SaveConfig(name)
-		name = sanitize(name)
-		if name == "" then return false end
-		return FS.write(name, HttpService:JSONEncode(collectState()))
-	end
-	function win:LoadConfig(name)
-		local data = readProfile(sanitize(name))
-		if not data then return false end
-		return applyState(data)
-	end
-	function win:LoadAutoConfig()
-		local n = FS.getAuto()
-		if n and FS.exists(n) then
-			if win:LoadConfig(n) then
-				win:Notify("Auto-Load", "Loaded profile \"" .. n .. "\".", 3)
-				return true
-			end
-		end
-		return false
-	end
-
-	local ThemesST = createSideTab("Themes", ICON.Themes, 1)
-	local ConfigST = createSideTab("Config", ICON.Config, 2)
-	local SettingsST = createSideTab("Settings", ICON.Settings, 3)
-
-	local Gallery = createTab(ThemesST, "Gallery", {System = true, Layout = "grid", CellSize = UDim2.new(0.25, -9, 0, 96)})
-	local ringList = {}
-	for _, info in ipairs(THEME_LIST) do
-		local tname = info[1]
-		local body = newCard(tname)
-		new("Frame", {Name = "Swatch", Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -34), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = body}, {
-			corner(6),
-			new("UIGradient", {Rotation = 25, Color = ColorSequence.new(info[2], info[3])}),
-		})
-		mkText("TextLabel", {Text = tname, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.new(0, 10, 1, -26), Size = UDim2.new(1, -20, 0, 22), Parent = body})
-		local ring = new("Frame", {Name = "Ring", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = body}, {corner(8)})
-		local rs = new("UIStroke", {Thickness = 2, Color = info[2], Transparency = (tname == currentTheme) and 0 or 1, Parent = ring})
-		ringList[tname] = rs
-		local hit = hitButton(body)
-		hover(body, hit)
-		pressFx(body, hit)
-		hit.MouseButton1Click:Connect(function() Pingo.SetTheme(tname) end)
-		finish(Gallery, body, {Name = tname, Searchable = false}, "theme", nil, {hit})
-	end
-
-	local SelectTab = createTab(ThemesST, "Select", {System = true})
-	local swatches, names = {}, {}
-	for _, info in ipairs(THEME_LIST) do
-		swatches[info[1]] = {info[2], info[3]}
-		table.insert(names, info[1])
-	end
-	local themeDD = SelectTab:AddDropdown("Theme", names, currentTheme, function(v)
-		if v and v ~= currentTheme then Pingo.SetTheme(v) end
-	end, {Description = "Search and pick a theme", Swatches = swatches, Placeholder = "Choose theme"})
-	SelectTab:AddButton("Random Theme", function()
-		local pick = names[math.random(1, #names)]
-		Pingo.SetTheme(pick)
-	end, {Description = "Surprise me"})
-
-	themeListeners[win] = function()
-		for tname, rs in pairs(ringList) do
-			tw(rs, 0.25, {Transparency = (tname == currentTheme) and 0 or 1})
-		end
-		if themeDD and themeDD.Get and themeDD:Get() ~= currentTheme then themeDD:Set(currentTheme, false) end
-		
-		for _, st in ipairs(win.SideTabs) do
-			for _, t in ipairs(tabsOf(st)) do
-				if t.Button then
-					local isDisplay = (st.Display == t)
-					bind(t.Button, "TextColor3", isDisplay and "Accent" or "SubText", true)
-				end
-			end
-		end
-	end
-
-	local General = createTab(SettingsST, "General", {System = true})
-	win.SizeStepper = General:AddStepper("Menu Size", 60, 140, 100, 10, function(v) win:SetSizeMultiplier(v / 100) end, {
-		MinusIcon = config.MinusIcon or ICON.Minus,
-		PlusIcon = config.PlusIcon or ICON.Plus,
-		Format = function(v) return v .. "%" end,
-		Description = "60% - 140%",
-	})
-	win.LockToggle = General:AddToggle("Lock Menu", false, function(s)
-		win.Locked = s
-		win:Notify("Lock Menu", s and "Menu is locked, dragging disabled." or "Menu unlocked, you can move it.", 2.5, config.LockIcon)
-	end, {
-		Icon = config.LockIcon,
-		Description = "Lock the menu position",
-		Format = function(s) return "Lock Menu: " .. (s and "ON" or "OFF") end,
-	})
-	win.NotifyToggle = General:AddToggle("Notifications", true, function(s)
-		win.NotifyEnabled = s
-	end, {Description = "Show pop-up notifications"})
-	win.MotionToggle = General:AddToggle("Reduce Motion", false, function(s)
-		win.ReduceMotion = s
-	end, {Description = "Fewer entrance animations"})
-	General:AddButton("Reset Menu Position", function()
-		tw(Holder, 0.6, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
-	end, {Description = "Move the menu back to center"})
-
-	local About = createTab(SettingsST, "About", {System = true})
-	About:AddLabel("Update", updateName, true)
-	About:AddLabel("Name", title)
-	About:AddLabel("Version", version)
-	About:AddLabel("Library", "Pingo " .. Pingo.Version)
-
-	local ProfilesTab = createTab(ConfigST, "Profiles", {System = true, Layout = "list"})
-	do
-		local page = ProfilesTab.Page
-		local cfg = {Selected = nil, Rows = {}}
-		local top = new("Frame", {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = 1, Parent = page})
-		local nameWrap = new("Frame", {Size = UDim2.new(1, -258, 1, 0), BorderSizePixel = 0, Parent = top}, {corner(9)})
-		bind(nameWrap, "BackgroundColor3", "Sidebar")
-		local nws = new("UIStroke", {Thickness = 1, Parent = nameWrap})
-		bind(nws, "Color", "Stroke")
-		local nameBox = mkText("TextBox", {Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -24, 1, 0), Text = "", PlaceholderText = "Config name...", Font = Enum.Font.GothamMedium, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = nameWrap}, "Text")
-		bind(nameBox, "PlaceholderColor3", "SubText")
-		nameBox.Focused:Connect(function() bind(nws, "Color", "Accent", true) end)
-		nameBox.FocusLost:Connect(function() bind(nws, "Color", "Stroke", true) end)
-		local createBtn = pill(top, {Text = "Create", Style = "Primary"}, {Size = UDim2.fromOffset(78, 40), Position = UDim2.new(1, -252, 0, 0), Radius = 9, TextSize = 13})
-		local saveBtn = pill(top, {Text = "Save"}, {Size = UDim2.fromOffset(78, 40), Position = UDim2.new(1, -168, 0, 0), Radius = 9, TextSize = 13})
-		local folderBtn = pill(top, {Text = "Folder"}, {Size = UDim2.fromOffset(78, 40), Position = UDim2.new(1, -84, 0, 0), Radius = 9, TextSize = 13})
-		local hint = mkText("TextLabel", {Text = FS.Supported and "Tap a profile to select it. Hold for Auto-Load, Load, Delete or Rename." or "Your executor has no file access: profiles are kept in memory for this session only.", Font = Enum.Font.Gotham, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, Size = UDim2.new(1, 0, 0, 28), LayoutOrder = 2, Parent = page}, "SubText")
-		local listFrame = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 3, Parent = page}, {
-			new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}),
-		})
-		local emptyLbl = mkText("TextLabel", {Text = "No saved profiles yet", Font = Enum.Font.GothamBold, TextSize = 14, Size = UDim2.new(1, 0, 0, 120), LayoutOrder = 4, Visible = false, Parent = page}, "SubText")
-		local function paintSelection()
-			for name, r in pairs(cfg.Rows) do
-				local sel = name == cfg.Selected
-				tw(r.stroke, 0.2, {Color = sel and T("Accent") or T("Stroke"), Transparency = sel and 0.1 or 0.35})
-				r.bar.Visible = sel
-			end
-		end
-		local refresh
-		local function doLoad(name)
-			if win:LoadConfig(name) then
-				win:Notify("Config loaded", "\"" .. name .. "\" was applied.", 3)
-			else
-				win:Notify("Load failed", "Could not read \"" .. name .. "\".", 3)
-			end
-		end
-		local function doAuto(name)
-			if FS.getAuto() == name then
-				FS.setAuto(nil)
-				win:Notify("Auto-Load", "Auto-Load removed.", 2.5)
-			else
-				FS.setAuto(name)
-				win:Notify("Auto-Load", "\"" .. name .. "\" will load automatically.", 3)
-			end
-			refresh()
-		end
-		local function doDelete(name)
-			win:Popup({
-				Title = "Delete profile?",
-				Text = "\"" .. name .. "\" will be permanently removed.",
-				Buttons = {
-					{Text = "Cancel"},
-					{Text = "Delete", Style = "Danger", Callback = function()
-						FS.delete(name)
-						if FS.getAuto() == name then FS.setAuto(nil) end
-						if cfg.Selected == name then cfg.Selected = nil end
-						refresh()
-						win:Notify("Deleted", "\"" .. name .. "\" removed.", 2.5)
-					end},
-				},
-			})
-		end
-		local function doRename(name)
-			win:Popup({
-				Title = "Rename profile",
-				Text = "Choose a new name for \"" .. name .. "\".",
-				Input = {Placeholder = "New name...", Default = name},
-				Buttons = {
-					{Text = "Cancel"},
-					{Text = "Rename", Style = "Primary", RequireInput = true, Callback = function(txt)
-						local new = sanitize(txt)
-						if new == "" or new == name then return end
-						if FS.exists(new) then
-							win:Notify("Rename failed", "\"" .. new .. "\" already exists.", 3)
-							return
-						end
-						local raw = FS.read(name)
-						if raw and FS.write(new, raw) then
-							FS.delete(name)
-							if FS.getAuto() == name then FS.setAuto(new) end
-							if cfg.Selected == name then cfg.Selected = new end
-							refresh()
-							win:Notify("Renamed", "\"" .. name .. "\" is now \"" .. new .. "\".", 2.5)
-						end
-					end},
-				},
-			})
-		end
-		local function buildRow(name, i, autoName)
-			local data = readProfile(name)
-			local sub = "Saved profile"
-			if data then
-				local cnt = 0
-				for _ in pairs(data.elements or {}) do cnt = cnt + 1 end
-				sub = (data.saved and os.date("%b %d %H:%M", data.saved) or "Saved") .. " - " .. cnt .. " settings"
-			end
-			local row = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, LayoutOrder = i, Parent = listFrame})
-			local body = new("TextButton", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), AutoButtonColor = false, Text = "", BorderSizePixel = 0, Parent = row}, {corner(10)})
-			bind(body, "BackgroundColor3", "Card")
-			local stroke = new("UIStroke", {Thickness = 1, Transparency = 0.35, Parent = body})
-			bind(stroke, "Color", "Stroke")
-			local bar = new("Frame", {AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.fromOffset(3, 28), BorderSizePixel = 0, Visible = false, Parent = body}, {corner(2)})
-			bind(bar, "BackgroundColor3", "Accent")
-			local ic = new("ImageLabel", {Image = icon(ICON.Config), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, Parent = body})
-			bind(ic, "ImageColor3", "Accent")
-			mkText("TextLabel", {Text = name, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(52, 9), Size = UDim2.new(1, -140, 0, 20), Parent = body})
-			mkText("TextLabel", {Text = sub, Font = Enum.Font.Gotham, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(52, 30), Size = UDim2.new(1, -140, 0, 16), Parent = body}, "SubText")
-			if autoName == name then
-				local chip = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.fromOffset(62, 22), BorderSizePixel = 0, BackgroundTransparency = 0.8, Parent = body}, {corner(11)})
-				bind(chip, "BackgroundColor3", "Accent")
-				mkText("TextLabel", {Text = "AUTO", Font = Enum.Font.GothamBold, TextSize = 11, Size = UDim2.fromScale(1, 1), Parent = chip}, "Accent")
-			end
-			cfg.Rows[name] = {stroke = stroke, bar = bar}
-			body.MouseEnter:Connect(function() tw(body, 0.25, {Position = UDim2.new(0.5, 0, 0.5, -2)}, Q) end)
-			body.MouseLeave:Connect(function() tw(body, 0.3, {Position = UDim2.fromScale(0.5, 0.5)}, Q) end)
-			body.MouseButton1Click:Connect(function()
-				if hold.consumed then return end
-				cfg.Selected = name
-				nameBox.Text = ""
-				paintSelection()
-			end)
-			attachHold(body, function(pos)
-				cfg.Selected = name
-				paintSelection()
-				local isAuto = FS.getAuto() == name
-				openMenu("Properties", name, {
-					{Text = isAuto and "Remove Auto-Load" or "Auto-Load", Callback = function() doAuto(name) end},
-					{Text = "Load", Callback = function() doLoad(name) end},
-					{Text = "Delete", Style = "Danger", Callback = function() doDelete(name) end},
-					{Text = "Rename", Callback = function() doRename(name) end},
-				}, pos)
-			end)
-			body.Position = UDim2.new(0.5, 24, 0.5, 0)
-			task.delay(0.03 * i, function()
-				if body.Parent then tw(body, 0.45, {Position = UDim2.fromScale(0.5, 0.5)}, Q) end
-			end)
-		end
-		refresh = function()
-			for _, c in ipairs(listFrame:GetChildren()) do
-				if c:IsA("Frame") then unbindTree(c); c:Destroy() end
-			end
-			cfg.Rows = {}
-			local profiles = FS.list()
-			local autoName = FS.getAuto()
-			for i, n in ipairs(profiles) do buildRow(n, i, autoName) end
-			emptyLbl.Visible = #profiles == 0
-			if cfg.Selected and not cfg.Rows[cfg.Selected] then cfg.Selected = nil end
-			paintSelection()
-		end
-		createBtn.MouseButton1Click:Connect(function()
-			local name = sanitize(nameBox.Text)
-			if name == "" then win:Notify("Create", "Type a config name first.", 2.5) return end
-			if FS.exists(name) then win:Notify("Create", "\"" .. name .. "\" already exists. Select it and press Save.", 3.5) return end
-			if win:SaveConfig(name) then
-				cfg.Selected = name
-				nameBox.Text = ""
-				refresh()
-				win:Notify("Profile created", "\"" .. name .. "\" saved with your current setup.", 3)
-			else
-				win:Notify("Create failed", "Could not write the file.", 3)
-			end
-		end)
-		saveBtn.MouseButton1Click:Connect(function()
-			local name = cfg.Selected or sanitize(nameBox.Text)
-			if name == "" then win:Notify("Save", "Select a profile or type a name.", 2.5) return end
-			if win:SaveConfig(name) then
-				cfg.Selected = name
-				nameBox.Text = ""
-				refresh()
-				win:Notify("Saved", "\"" .. name .. "\" updated.", 2.5)
-			end
-		end)
-		folderBtn.MouseButton1Click:Connect(function()
-			local path = FS.Path
-			if type(setclipboard) == "function" then
-				pcall(setclipboard, path)
-				win:Notify("Folder", "Path copied: " .. path, 3.5)
-			else
-				win:Notify("Folder", path, 5)
-			end
-		end)
-		refresh()
-		win.RefreshProfiles = refresh
-	end
-
 	function win:SetTheme(name) Pingo.SetTheme(name) end
 	local unloadHooks = {}
 	function win:OnUnload(fn) table.insert(unloadHooks, fn) end
@@ -2831,11 +2199,7 @@ function Pingo.CreateWindow(title, version, config)
 	end
 
 	task.defer(function()
-		if not win.UserSelected then selectSideTab(ThemesST) end
 		if not config.StartHidden then win:Toggle(true) end
-		task.delay(config.AutoLoadDelay or 0.6, function()
-			if not win.Unloaded then win:LoadAutoConfig() end
-		end)
 	end)
 
 	return win
