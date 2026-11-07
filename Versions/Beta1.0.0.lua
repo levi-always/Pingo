@@ -1,13 +1,14 @@
---[[ Pingo UI Library | v1.0.0 (Remake) ------------------------------------------------------------------
+--[[ Pingo UI Library | v1.0.0 (Remake - Vertical Layout) --------------------------------------------
 HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
 Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
 Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
 Floating -> Lock|Move / Resize / Hide
 Profile -> Auto-Load / Load / Delete / Rename
 Built-in SideTabs (bottom): Themes, Config, Settings
-]]
+-------------------------------------------------------------------------------------------------- ]]
 
 local Pingo = {Version = "1.0.0", Name = "Pingo", TintIcons = true}
+
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -20,8 +21,7 @@ local Q = Enum.EasingStyle.Quint
 local BACK = Enum.EasingStyle.Back
 local QUAD = Enum.EasingStyle.Quad
 local IN = Enum.EasingDirection.In
-
-local GAP = 4
+local GAP = 10
 local CELL_H = 64
 local HOLD_TIME = 0.8
 
@@ -39,7 +39,6 @@ local ICON = {
 -- ============================================================
 -- HELPERS
 -- ============================================================
-
 local function rgb(r, g, b) return Color3.fromRGB(r, g, b) end
 
 local function tw(obj, t, props, style, dir)
@@ -58,22 +57,6 @@ local function new(class, props, children)
 	for _, c in ipairs(children or {}) do c.Parent = o end
 	if parent then o.Parent = parent end
 	return o
-end
-
-local function autoFitText(label, maxWidth, minSize, maxSize)
-	minSize = minSize or 10
-	maxSize = maxSize or 16
-	local text = label.Text
-	local font = label.Font
-	
-	for size = maxSize, minSize, -1 do
-		local textSize = TextService:GetTextSize(text, size, font, Vector2.new(maxWidth, 100))
-		if textSize.X <= maxWidth then
-			label.TextSize = size
-			return
-		end
-	end
-	label.TextSize = minSize
 end
 
 local function corner(r) return new("UICorner", {CornerRadius = UDim.new(0, r)}) end
@@ -105,7 +88,6 @@ end
 -- ============================================================
 -- THEMES (32)
 -- ============================================================
-
 local BASE = {
 	Background = rgb(18, 19, 24), Sidebar = rgb(24, 25, 31), Card = rgb(32, 34, 42),
 	Off = rgb(55, 58, 70), Text = rgb(240, 240, 245), SubText = rgb(140, 145, 160),
@@ -305,7 +287,6 @@ end
 -- ============================================================
 -- WINDOW
 -- ============================================================
-
 function Pingo.CreateWindow(title, version, config)
 	config = config or {}
 	title = title or "Pingo"
@@ -448,7 +429,7 @@ function Pingo.CreateWindow(title, version, config)
 	local dragArea = new("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Active = true, Parent = Sidebar})
 	makeDraggable(dragArea, Holder, nil, menuCanDrag)
 
-		local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
+	local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
 		new("UIListLayout", {FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
 	local titleLbl = mkText("TextLabel", {
@@ -461,11 +442,10 @@ function Pingo.CreateWindow(title, version, config)
 		LayoutOrder = 1,
 		Parent = titleRow
 	}, "Accent")
-	
+
 	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
-	
-	-- تم تغيير لون الإصدار إلى Accent لكي يتغير مع الثيم
+
 	mkText("TextLabel", {
 		Text = version,
 		Font = Enum.Font.Gotham,
@@ -476,7 +456,7 @@ function Pingo.CreateWindow(title, version, config)
 		LayoutOrder = 2,
 		Parent = titleRow
 	}, "Accent")
-	
+
 	local navH = H - 62
 	local SYS_TOP = navH - 3 * 42 - 8
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
@@ -536,7 +516,7 @@ function Pingo.CreateWindow(title, version, config)
 
 	local SearchPage = new("ScrollingFrame", {Name = "SearchPage", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Visible = false, Parent = PagesHolder}, {
 		new("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8)}),
-		new("UIGridLayout", {CellSize = UDim2.new(0.5, -8, 0, CELL_H), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder}),
+		new("UIListLayout", {Padding = UDim.new(0, GAP), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
 	bind(SearchPage, "ScrollBarImageColor3", "SubText")
 
@@ -786,11 +766,12 @@ function Pingo.CreateWindow(title, version, config)
 			end
 		end
 	end
+
 	SearchBox:GetPropertyChangedSignal("Text"):Connect(function() performSearch(SearchBox.Text) end)
 
 	local function newCard(name)
 		win.Counter = win.Counter + 1
-		local outer = new("Frame", {Name = tostring(name), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
+		local outer = new("Frame", {Name = tostring(name), Size = UDim2.new(1, 0, 0, CELL_H), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
 		local body = new("Frame", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = outer}, {corner(8)})
 		bind(body, "BackgroundColor3", "Card")
 		local st = new("UIStroke", {Name = "CardStroke", Thickness = 1, Transparency = 0.35, Parent = body})
@@ -1246,12 +1227,14 @@ function Pingo.CreateWindow(title, version, config)
 		tab.Star = new("ImageLabel", {Name = "Star", Image = icon(ICON.Star), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(13, 13), BackgroundTransparency = 1, Visible = false, ZIndex = 3, Parent = btn})
 		bind(tab.Star, "ImageColor3", "Accent")
 		local group = new("CanvasGroup", {Name = st.Name .. "_" .. name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, GroupTransparency = 1, Visible = false, Parent = PagesHolder})
+		
 		local layout
-		if opts.Layout == "list" then
-			layout = new("UIListLayout", {Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder})
-		else
+		if opts.Layout == "grid" then
 			layout = new("UIGridLayout", {CellSize = opts.CellSize or UDim2.new(0.5, -8, 0, CELL_H), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder})
+		else
+			layout = new("UIListLayout", {Padding = UDim.new(0, GAP), SortOrder = Enum.SortOrder.LayoutOrder})
 		end
+
 		local page = new("ScrollingFrame", {Name = "Page", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Parent = group}, {
 			new("UIPadding", {PaddingTop = UDim.new(0, 2), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 8)}),
 			layout,
@@ -1501,10 +1484,10 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
-				function tab:AddStepper(a, mn, mx, default, step, callback, extra)
+		function tab:AddStepper(a, mn, mx, default, step, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Min = mn, Max = mx, Default = default, Step = step, Callback = callback}, extra)
 			local min, max = o.Min or 0, o.Max or 100
-			local amount = o.Amount or 10 -- يمكنك تحديد قيمة amount هنا أو تمريرها عبر الـ extra
+			local amount = o.Amount or 10
 			local fmt = o.Format or function(v) return tostring(v) end
 			local default0 = math.clamp(o.Default or min, min, max)
 			local value = default0
@@ -1570,7 +1553,7 @@ function Pingo.CreateWindow(title, version, config)
 			finish(tab, body, o, "stepper", obj, {zone})
 			return obj
 		end
-		
+
 		function tab:AddPopup(a, popupOpts, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Popup = popupOpts}, extra)
 			local body = newCard(o.Name)
@@ -1814,6 +1797,7 @@ function Pingo.CreateWindow(title, version, config)
 			finish(tab, body, o, "dropdown", obj, {hit})
 			return obj
 		end
+
 		return tab
 	end
 
@@ -1983,8 +1967,8 @@ function Pingo.CreateWindow(title, version, config)
 	local NotifHolder = new("Frame", {Name = "Notifications", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.new(0, NW, 1, -32), BackgroundTransparency = 1, ZIndex = 20, Parent = gui}, {
 		new("UIListLayout", {Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
-	local notifCount, notifList = 0, {}
 
+	local notifCount, notifList = 0, {}
 	function win:Notify(nTitle, text, duration, extra)
 		local o = {}
 		if type(nTitle) == "table" then
@@ -2531,7 +2515,7 @@ function Pingo.CreateWindow(title, version, config)
 	local ConfigST = createSideTab("Config", ICON.Config, 2)
 	local SettingsST = createSideTab("Settings", ICON.Settings, 3)
 
-	local Gallery = createTab(ThemesST, "Gallery", {System = true, CellSize = UDim2.new(0.25, -9, 0, 96)})
+	local Gallery = createTab(ThemesST, "Gallery", {System = true, Layout = "grid", CellSize = UDim2.new(0.25, -9, 0, 96)})
 	local ringList = {}
 	for _, info in ipairs(THEME_LIST) do
 		local tname = info[1]
@@ -2565,13 +2549,12 @@ function Pingo.CreateWindow(title, version, config)
 		Pingo.SetTheme(pick)
 	end, {Description = "Surprise me"})
 
-		themeListeners[win] = function()
+	themeListeners[win] = function()
 		for tname, rs in pairs(ringList) do
 			tw(rs, 0.25, {Transparency = (tname == currentTheme) and 0 or 1})
 		end
 		if themeDD and themeDD.Get and themeDD:Get() ~= currentTheme then themeDD:Set(currentTheme, false) end
 		
-		-- تحديث ألوان أزرار التبويبات والتبويب المفتوح حالياً بناءً على الثيم الجديد
 		for _, st in ipairs(win.SideTabs) do
 			for _, t in ipairs(tabsOf(st)) do
 				if t.Button then
@@ -2581,7 +2564,7 @@ function Pingo.CreateWindow(title, version, config)
 			end
 		end
 	end
-	
+
 	local General = createTab(SettingsST, "General", {System = true})
 	win.SizeStepper = General:AddStepper("Menu Size", 60, 140, 100, 10, function(v) win:SetSizeMultiplier(v / 100) end, {
 		MinusIcon = config.MinusIcon or ICON.Minus,
