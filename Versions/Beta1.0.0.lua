@@ -1,4 +1,4 @@
---[[ Pingo UI Library | v1.0.0 (Remake - Vertical Layout) --------------------------------------------
+--[[ Pingo UI Library | v1.0.0 (Remake - Vertical & Sections & Autoscaling) --------------------------
 HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
 Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
 Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
@@ -203,6 +203,7 @@ local function mkText(class, props, key)
 	props.BackgroundTransparency = props.BackgroundTransparency or 1
 	props.BorderSizePixel = 0
 	props.Font = props.Font or Enum.Font.GothamMedium
+	props.TextScaled = props.TextScaled ~= false -- تفعيل التكيف التلقائي للنصوص (Autoscale) افتراضياً
 	local o = new(class, props)
 	bind(o, "TextColor3", key or "Text")
 	return o
@@ -960,7 +961,7 @@ function Pingo.CreateWindow(title, version, config)
 		local st = rec.Tab.SideTab
 		rec.Hidden = v
 		if v and rec.Fav then setElementFav(rec, false) end
-		local sc = rec.Body:FindFirstChild("Scale")
+		local sc = rec.Body and rec.Body:FindFirstChild("Scale")
 		local function move()
 			if rec.Outer.Parent ~= SearchPage then
 				rec.Outer.Parent = v and st.HiddenTab.Page or rec.Tab.Page
@@ -1264,6 +1265,35 @@ function Pingo.CreateWindow(title, version, config)
 			st.TabBar.Visible = true
 		end
 		if win.ActiveSideTab == st and not st.ActiveTab then selectTab(tab) end
+
+		-- ==========================================================
+		-- ADD SECTION (قسم جديد مع تباعد من الأعلى والأسفل)
+		-- ==========================================================
+		function tab:AddSection(name)
+			win.Counter = win.Counter + 1
+			local outer = new("Frame", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
+			local lbl = mkText("TextLabel", {
+				Text = string.upper(tostring(name)),
+				Font = Enum.Font.GothamBold,
+				TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				Position = UDim2.fromOffset(4, 12),
+				Size = UDim2.new(1, -8, 1, -12),
+				Parent = outer,
+			}, "Accent")
+			local rec = {Name = tostring(name), Kind = "section", Tab = tab, Body = outer, Outer = outer, BaseOrder = outer.LayoutOrder}
+			rec.Search = string.lower(rec.Name)
+			table.insert(win.Elements, rec)
+			if not tab.System then
+				rec.Id = makeId(tab, rec.Name)
+				win.Registry[rec.Id] = rec
+				table.insert(tab.Recs, rec)
+			end
+			return {
+				SetText = function(_, t) lbl.Text = string.upper(tostring(t)) end
+			}
+		end
 
 		function tab:AddButton(a, callback, extra)
 			local o = type(a) == "table" and a or merge({Name = a, Callback = callback}, extra)
@@ -1629,7 +1659,7 @@ function Pingo.CreateWindow(title, version, config)
 				codeLines = {}
 				local y = 0
 				for lineNo, line in ipairs(string.split(tostring(src), "\n")) do
-					local lbl = new("TextLabel", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 16), Text = "", Font = Enum.Font.Code, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3, Parent = codeScroll})
+					local lbl = new("TextLabel", {BackgroundTransparency = 1, Position = UDim2.fromOffset(0, y), Size = UDim2.new(1, 0, 0, 16), Text = "", Font = Enum.Font.Code, TextSize = 13, TextScaled = false, TextXAlignment = Enum.TextXAlignment.Left, AutomaticSize = Enum.AutomaticSize.X, ZIndex = 3, Parent = codeScroll})
 					local rich = {}
 					for _, seg in ipairs(colorize(line)) do
 						local col = T(seg[2]) or T("Text")
