@@ -1,11 +1,11 @@
---[[ Pingo UI Library | v1.0.0 (Clean Sidebar & Enhanced Sections) -------------------------------
+--[[ Pingo UI Library | v1.1.0 (Animated Sections & Scroll Reveal) -------------------------------
 HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
 Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
 Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
 Floating -> Lock|Move / Resize / Hide
 -------------------------------------------------------------------------------------------------- ]]
 
-local Pingo = {Version = "1.0.0", Name = "Pingo", TintIcons = true}
+local Pingo = {Version = "1.1.0", Name = "Pingo", TintIcons = true}
 
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
@@ -718,23 +718,32 @@ function Pingo.CreateWindow(title, version, config)
 		return rec.Tab.Page
 	end
 
+	local searchAnimationToken = 0
+	local function animateSearchResult(rec, index)
+		if win.ReduceMotion then return end
+		local body = rec.Body
+		if not body or not body.Parent then return end
+		local scale = body:FindFirstChild("Scale")
+		searchAnimationToken = searchAnimationToken + 1
+		local token = searchAnimationToken
+		body.GroupTransparency = 1
+		if scale then scale.Scale = 0.92 end
+		body.Position = UDim2.new(0.5, 0, 0.5, 10)
+		task.delay(math.min(index * 0.025, 0.28), function()
+			if not body.Parent or not rec.Outer.Parent then return end
+			tw(body, 0.32, {GroupTransparency = 0, Position = UDim2.fromScale(0.5, 0.5)}, Q)
+			if scale then tw(scale, 0.42, {Scale = 1}, BACK) end
+		end)
+	end
 	local function performSearch(q)
 		q = string.lower(q):gsub("^%s+", ""):gsub("%s+$", "")
 		win.SearchText = q
 		if q == "" then
-			for _, rec in ipairs(win.Elements) do
-				if rec.Outer.Parent == SearchPage then rec.Outer.Parent = homePage(rec) end
-			end
+			for _, rec in ipairs(win.Elements) do if rec.Outer.Parent == SearchPage then rec.Outer.Parent = homePage(rec) end end
 			SearchPage.Visible = false
 			TabBarHolder.Visible = true
 			local ct = win.CurrentTab
-			if ct and ct.SideTab == win.ActiveSideTab then
-				local g = ct.Group
-				g.Position = UDim2.new()
-				g.GroupTransparency = 0
-				g.ZIndex = 2
-				g.Visible = true
-			end
+			if ct and ct.SideTab == win.ActiveSideTab then local g = ct.Group; g.Position = UDim2.new(); g.GroupTransparency = 0; g.ZIndex = 2; g.Visible = true end
 			return
 		end
 		hideAllPages()
@@ -743,18 +752,10 @@ function Pingo.CreateWindow(title, version, config)
 		local shownCount = 0
 		for _, rec in ipairs(win.Elements) do
 			if string.find(rec.Search, q, 1, true) then
-				if rec.Outer.Parent ~= SearchPage then
-					rec.Outer.Parent = SearchPage
-					shownCount = shownCount + 1
-					local sc = rec.Body:FindFirstChild("Scale")
-					if sc and shownCount <= 12 then
-						sc.Scale = 0.88
-						task.delay(shownCount * 0.025, function() tw(sc, 0.35, {Scale = 1}, BACK) end)
-					end
-				end
-			elseif rec.Outer.Parent == SearchPage then
-				rec.Outer.Parent = homePage(rec)
-			end
+				shownCount = shownCount + 1
+				if rec.Outer.Parent ~= SearchPage then rec.Outer.Parent = SearchPage end
+				animateSearchResult(rec, shownCount)
+			elseif rec.Outer.Parent == SearchPage then rec.Outer.Parent = homePage(rec) end
 		end
 	end
 
@@ -763,7 +764,7 @@ function Pingo.CreateWindow(title, version, config)
 	local function newCard(name)
 		win.Counter = win.Counter + 1
 		local outer = new("Frame", {Name = tostring(name), Size = UDim2.new(1, 0, 0, CELL_H), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
-		local body = new("Frame", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = outer}, {corner(8)})
+		local body = new("CanvasGroup", {Name = "Body", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), GroupTransparency = 0, BorderSizePixel = 0, Parent = outer}, {corner(8)})
 		bind(body, "BackgroundColor3", "Card")
 		local st = new("UIStroke", {Name = "CardStroke", Thickness = 1, Transparency = 0.35, Parent = body})
 		bind(st, "Color", "Stroke")
@@ -772,6 +773,37 @@ function Pingo.CreateWindow(title, version, config)
 		new("Frame", {Name = "Ripples", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true, Parent = body}, {corner(8)})
 		return body
 	end
+
+	-- Reveal cards as they enter the viewport while the user scrolls.
+	local revealedItems = setmetatable({}, {__mode = "k"})
+	local function revealVisible(page)
+		if win.ReduceMotion or not page.Visible then return end
+		local top, bottom = page.AbsolutePosition.Y, page.AbsolutePosition.Y + page.AbsoluteSize.Y
+		for _, item in ipairs(page:GetChildren()) do
+			if item:IsA("GuiObject") and item.Visible then
+				local y1, y2 = item.AbsolutePosition.Y, item.AbsolutePosition.Y + item.AbsoluteSize.Y
+				if y2 >= top and y1 <= bottom and not revealedItems[item] then
+					revealedItems[item] = true
+					local body = item:FindFirstChild("Body") or (item:IsA("CanvasGroup") and item)
+					if body and body:IsA("CanvasGroup") then
+						local scale = body:FindFirstChild("Scale")
+						body.GroupTransparency = 1
+						body.Position = UDim2.new(0.5, 0, 0.5, 9)
+						if scale then scale.Scale = 0.96 end
+						tw(body, 0.38, {GroupTransparency = 0, Position = UDim2.fromScale(0.5, 0.5)}, Q)
+						if scale then tw(scale, 0.42, {Scale = 1}, BACK) end
+					end
+				end
+			end
+		end
+	end
+	local function watchScroll(page)
+		page:GetPropertyChangedSignal("CanvasPosition"):Connect(function() revealVisible(page) end)
+		page:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() task.defer(function() revealVisible(page) end) end)
+		page.ChildAdded:Connect(function() task.defer(function() revealVisible(page) end) end)
+		task.defer(function() revealVisible(page) end)
+	end
+	watchScroll(SearchPage)
 
 	local function hover(body, src)
 		local shine, stroke = body.Shine, body.CardStroke
@@ -1231,6 +1263,7 @@ function Pingo.CreateWindow(title, version, config)
 			layout,
 		})
 		bind(page, "ScrollBarImageColor3", "SubText")
+		watchScroll(page)
 		tab.Group, tab.Page = group, page
 		btn.MouseButton1Click:Connect(function()
 			if hold.consumed then return end
@@ -1259,31 +1292,25 @@ function Pingo.CreateWindow(title, version, config)
 		-- ==========================================================
 		-- ADD SECTION (مع تباعد من الأعلى والأسفل مثل الصورة)
 		-- ==========================================================
-		function tab:AddSection(name)
+		function tab:AddSection(name, description)
 			win.Counter = win.Counter + 1
-			-- زيادة الارتفاع وإضافة مسافة علوية لتوفير تباعد مثالي (Padding)
-			local outer = new("Frame", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter})
-			local lbl = mkText("TextLabel", {
-				Text = string.upper(tostring(name)),
-				Font = Enum.Font.GothamBold,
-				TextSize = 13,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextYAlignment = Enum.TextYAlignment.Center,
-				Position = UDim2.fromOffset(4, 20),
-				Size = UDim2.new(1, -8, 1, -20),
-				Parent = outer,
-			}, "Accent")
+			local outer = new("CanvasGroup", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, description and 58 or 48), BackgroundTransparency = 1, GroupTransparency = 0, BorderSizePixel = 0, LayoutOrder = win.Counter, Parent = tab.Page})
+			local accent = new("Frame", {Position = UDim2.fromOffset(3, 17), Size = UDim2.fromOffset(3, description and 27 or 20), BackgroundColor3 = Color3.new(1,1,1), BorderSizePixel = 0, Parent = outer}, {corner(3)})
+			grad({"Accent", "Accent2"}, accent, {Rotation = 90})
+			local lbl = mkText("TextLabel", {Text = string.upper(tostring(name)), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Position = UDim2.fromOffset(14, description and 8 or 9), Size = UDim2.new(1, -22, 0, 20), Parent = outer}, "Accent")
+			local desc
+			if description then desc = mkText("TextLabel", {Text = tostring(description), Font = Enum.Font.Gotham, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Position = UDim2.fromOffset(14, 29), Size = UDim2.new(1, -22, 0, 16), Parent = outer}, "SubText") end
+			local line = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0, description and 19 or 20), Size = UDim2.new(0.28, 0, 0, 1), BackgroundColor3 = Color3.new(1,1,1), BackgroundTransparency = 0.82, BorderSizePixel = 0, Parent = outer})
+			grad({"Accent", "Accent2"}, line)
 			local rec = {Name = tostring(name), Kind = "section", Tab = tab, Body = outer, Outer = outer, BaseOrder = outer.LayoutOrder}
-			rec.Search = string.lower(rec.Name)
+			rec.Search = string.lower(rec.Name .. " " .. tostring(description or ""))
 			table.insert(win.Elements, rec)
-			if not tab.System then
-				rec.Id = makeId(tab, rec.Name)
-				win.Registry[rec.Id] = rec
-				table.insert(tab.Recs, rec)
-			end
-			return {
-				SetText = function(_, t) lbl.Text = string.upper(tostring(t)) end
-			}
+			if not tab.System then rec.Id = makeId(tab, rec.Name); win.Registry[rec.Id] = rec; table.insert(tab.Recs, rec) end
+			local api = {}
+			function api:SetText(t) lbl.Text = string.upper(tostring(t)) end
+			function api:SetDescription(t) if desc then desc.Text = tostring(t) end end
+			function api:SetVisible(v) outer.Visible = v == true end
+			return api
 		end
 
 		function tab:AddButton(a, callback, extra)
