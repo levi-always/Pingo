@@ -1293,24 +1293,59 @@ function Pingo.CreateWindow(title, version, config)
 		-- ADD SECTION (مع تباعد من الأعلى والأسفل مثل الصورة)
 		-- ==========================================================
 		function tab:AddSection(name, description)
-			win.Counter = win.Counter + 1
-			local outer = new("CanvasGroup", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, description and 58 or 48), BackgroundTransparency = 1, GroupTransparency = 0, BorderSizePixel = 0, LayoutOrder = win.Counter, Parent = tab.Page})
-			local accent = new("Frame", {Position = UDim2.fromOffset(3, 17), Size = UDim2.fromOffset(3, description and 27 or 20), BackgroundColor3 = Color3.new(1,1,1), BorderSizePixel = 0, Parent = outer}, {corner(3)})
-			grad({"Accent", "Accent2"}, accent, {Rotation = 90})
-			local lbl = mkText("TextLabel", {Text = string.upper(tostring(name)), Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Position = UDim2.fromOffset(14, description and 8 or 9), Size = UDim2.new(1, -22, 0, 20), Parent = outer}, "Accent")
-			local desc
-			if description then desc = mkText("TextLabel", {Text = tostring(description), Font = Enum.Font.Gotham, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Position = UDim2.fromOffset(14, 29), Size = UDim2.new(1, -22, 0, 16), Parent = outer}, "SubText") end
-			local line = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0, description and 19 or 20), Size = UDim2.new(0.28, 0, 0, 1), BackgroundColor3 = Color3.new(1,1,1), BackgroundTransparency = 0.82, BorderSizePixel = 0, Parent = outer})
-			grad({"Accent", "Accent2"}, line)
-			local rec = {Name = tostring(name), Kind = "section", Tab = tab, Body = outer, Outer = outer, BaseOrder = outer.LayoutOrder}
-			rec.Search = string.lower(rec.Name .. " " .. tostring(description or ""))
-			table.insert(win.Elements, rec)
-			if not tab.System then rec.Id = makeId(tab, rec.Name); win.Registry[rec.Id] = rec; table.insert(tab.Recs, rec) end
-			local api = {}
-			function api:SetText(t) lbl.Text = string.upper(tostring(t)) end
-			function api:SetDescription(t) if desc then desc.Text = tostring(t) end end
-			function api:SetVisible(v) outer.Visible = v == true end
-			return api
+    win.Counter = win.Counter + 1
+
+    local outer = new("CanvasGroup", {
+        Name = "Section_" .. tostring(name),
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = win.Counter,
+        Parent = tab.Page
+    })
+
+    local lbl = mkText("TextLabel", {
+        Text = tostring(name),
+        Font = Enum.Font.GothamBold,
+        TextSize = 17,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.new(1, -20, 1, 0),
+        BackgroundTransparency = 1,
+        Parent = outer
+    }, "Text")
+
+    local rec = {
+        Name = tostring(name),
+        Kind = "section",
+        Tab = tab,
+        Body = outer,
+        Outer = outer,
+        BaseOrder = outer.LayoutOrder
+    }
+
+    rec.Search = string.lower(rec.Name)
+
+    table.insert(win.Elements, rec)
+
+    if not tab.System then
+        rec.Id = makeId(tab, rec.Name)
+        win.Registry[rec.Id] = rec
+        table.insert(tab.Recs, rec)
+    end
+
+    local api = {}
+
+    function api:SetText(t)
+        lbl.Text = tostring(t)
+    end
+
+    function api:SetVisible(v)
+        outer.Visible = v == true
+    end
+
+    return api
 		end
 
 		function tab:AddButton(a, callback, extra)
