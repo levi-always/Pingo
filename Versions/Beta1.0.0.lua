@@ -1,11 +1,11 @@
---[[ Pingo UI Library | v1.2.0 (Redz Hub Style & Top Controls) -----------------------------------
- HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
- Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
- Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
- Floating -> Lock|Move / Resize / Hide
+--[[ Pingo UI Library | v1.1.0 (Animated Sections & Scroll Reveal) -------------------------------
+HOLD (0.8s) on any Tab or Element to open the "Properties" menu:
+Tab -> Favourite / Hide / Reset Tab (hidden tabs live in the "Hidden" tab)
+Element -> Floating Button|Slider / Favourite / Hide (Reset for inputs)
+Floating -> Lock|Move / Resize / Hide
 -------------------------------------------------------------------------------------------------- ]]
 
-local Pingo = {Version = "1.2.0", Name = "Pingo", TintIcons = true}
+local Pingo = {Version = "1.1.0", Name = "Pingo", TintIcons = true}
 
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
@@ -72,6 +72,14 @@ local function merge(o, extra)
 	return o
 end
 
+local function sanitize(n)
+	n = tostring(n or "")
+	n = n:gsub("[^%w%s%-_%.]", "")
+	n = n:gsub("^%s+", "")
+	n = n:gsub("%s+$", "")
+	return string.sub(n, 1, 32)
+end
+
 -- ============================================================
 -- THEMES (32)
 -- ============================================================
@@ -126,6 +134,7 @@ end
 
 local currentTheme = "Ruby"
 local function T(key) return THEMES[currentTheme][key] end
+
 local bindings = setmetatable({}, {__mode = "k"})
 local gradients = setmetatable({}, {__mode = "k"})
 local themeListeners = {}
@@ -277,9 +286,10 @@ function Pingo.CreateWindow(title, version, config)
 	config = config or {}
 	title = title or "Pingo"
 	version = version or Pingo.Version
-	local W, H = config.Width or 660, config.Height = config.Height or 420
+	local updateName = config.Update or "ThePerfect"
+	local W, H = config.Width or 660, config.Height or 420
 	if config.Theme and THEMES[config.Theme] then currentTheme = config.Theme end
-
+	
 	local win = {
 		SideTabs = {}, Elements = {}, Registry = {}, TabRegistry = {}, UsedIds = {}, Conns = {}, Floats = {},
 		Counter = 0, FavCounter = 0, FloatCount = 0,
@@ -408,7 +418,6 @@ function Pingo.CreateWindow(title, version, config)
 
 	local Sidebar = new("Frame", {Name = "Sidebar", Size = UDim2.new(0, 170, 1, 0), BorderSizePixel = 0, Parent = Main})
 	bind(Sidebar, "BackgroundColor3", "Sidebar")
-
 	local divider = new("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BorderSizePixel = 0, Parent = Sidebar})
 	bind(divider, "BackgroundColor3", "Stroke")
 
@@ -418,23 +427,33 @@ function Pingo.CreateWindow(title, version, config)
 	local titleRow = new("Frame", {Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 42), BackgroundTransparency = 1, Parent = Sidebar}, {
 		new("UIListLayout", {FillDirection = Enum.FillDirection.Vertical, Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder}),
 	})
-
 	local titleLbl = mkText("TextLabel", {
-		Text = title, Font = Enum.Font.GothamBold, TextSize = 16,
-		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.new(1, 0, 0, 22), LayoutOrder = 1, Parent = titleRow
+		Text = title,
+		Font = Enum.Font.GothamBold,
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Size = UDim2.new(1, 0, 0, 22),
+		LayoutOrder = 1,
+		Parent = titleRow
 	}, "Accent")
 
 	local tg = grad({"Accent", "Accent2", "Accent"}, titleLbl, {Offset = Vector2.new(-0.6, 0)})
 	TweenService:Create(tg, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
 
 	mkText("TextLabel", {
-		Text = version, Font = Enum.Font.Gotham, TextSize = 11,
-		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.new(1, 0, 0, 15), LayoutOrder = 2, Parent = titleRow
+		Text = version,
+		Font = Enum.Font.Gotham,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Size = UDim2.new(1, 0, 0, 15),
+		LayoutOrder = 2,
+		Parent = titleRow
 	}, "Accent")
 
 	local Nav = new("Frame", {Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, -1, 1, -62), BackgroundTransparency = 1, Parent = Sidebar})
+
 	local Pill = new("Frame", {Name = "Pill", Position = UDim2.fromOffset(10, 2), Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Visible = false, Parent = Nav}, {corner(9)})
 	grad({"AccentDark", "Accent2Dark"}, Pill)
 	local pillStroke = new("UIStroke", {Thickness = 1, Transparency = 0.5, Parent = Pill})
@@ -459,29 +478,14 @@ function Pingo.CreateWindow(title, version, config)
 			if pillToken ~= my then return end
 			tw(Pill, 0.38, {Position = UDim2.fromOffset(10, y), Size = UDim2.new(1, -20, 0, 38)}, Q)
 		end)
+		task.delay(0.55, function()
+			if pillToken == my then Pill.Position = UDim2.fromOffset(10, y); Pill.Size = UDim2.new(1, -20, 0, 38) end
+		end)
 	end
 
 	local Content = new("Frame", {Name = "Content", Position = UDim2.fromOffset(170, 0), Size = UDim2.new(1, -170, 1, 0), BackgroundTransparency = 1, Parent = Main})
-	local dragTop = new("Frame", {Size = UDim2.new(1, -70, 0, 12), BackgroundTransparency = 1, Active = true, Parent = Content})
+	local dragTop = new("Frame", {Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, Active = true, Parent = Content})
 	makeDraggable(dragTop, Holder, nil, menuCanDrag)
-
-	-- ==========================================================
-	-- TOP WINDOW CONTROLS (- & X) مثل Redz Hub
-	-- ==========================================================
-	local topControls = new("Frame", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Size = UDim2.fromOffset(60, 24), BackgroundTransparency = 1, ZIndex = 30, Parent = Content})
-	new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
-
-	local function winBtn(glyph, cb)
-		local b = new("TextButton", {Size = UDim2.fromOffset(24, 24), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.9, Text = glyph, Font = Enum.Font.GothamBold, TextSize = 13, AutoButtonColor = false, BorderSizePixel = 0, Parent = topControls}, {corner(6)})
-		bind(b, "TextColor3", "SubText")
-		b.MouseEnter:Connect(function() tw(b, 0.15, {BackgroundTransparency = 0.7}); bind(b, "TextColor3", "Accent", true) end)
-		b.MouseLeave:Connect(function() tw(b, 0.2, {BackgroundTransparency = 0.9}); bind(b, "TextColor3", "SubText", true) end)
-		b.MouseButton1Click:Connect(cb)
-		return b
-	end
-
-	winBtn("-", function() win:Toggle(false) end)
-	winBtn("×", function() win:Unload() end)
 
 	local topLine = new("Frame", {Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 50, Parent = Main})
 	local lg = grad({"Accent", "Accent2", "Accent"}, topLine, {Offset = Vector2.new(-1, 0)})
@@ -491,13 +495,10 @@ function Pingo.CreateWindow(title, version, config)
 	bind(SearchBar, "BackgroundColor3", "Sidebar")
 	local searchStroke = new("UIStroke", {Thickness = 1, Parent = SearchBar})
 	bind(searchStroke, "Color", "Stroke")
-
 	local searchIcon = new("ImageLabel", {Image = icon(ICON.Search), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, Parent = SearchBar})
 	bind(searchIcon, "ImageColor3", "SubText")
-
-	local SearchBox = mkText("TextBox", {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0), Text = "", PlaceholderText = "Search...", Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = SearchBar}, "Text")
+	local SearchBox = mkText("TextBox", {Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0), Text = "", PlaceholderText = "Search", Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = SearchBar}, "Text")
 	bind(SearchBox, "PlaceholderColor3", "SubText")
-
 	SearchBox.Focused:Connect(function() bind(searchStroke, "Color", "Accent", true); tw(searchIcon, 0.2, {Size = UDim2.fromOffset(21, 21)}, BACK) end)
 	SearchBox.FocusLost:Connect(function() bind(searchStroke, "Color", "Stroke", true); tw(searchIcon, 0.2, {Size = UDim2.fromOffset(18, 18)}) end)
 
@@ -618,6 +619,9 @@ function Pingo.CreateWindow(title, version, config)
 			if st.IndToken ~= my then return end
 			tw(st.TabInd, 0.4, {Position = p2, Size = s2}, Q)
 		end)
+		task.delay(0.55, function()
+			if st.IndToken == my then st.TabInd.Position, st.TabInd.Size = p2, s2 end
+		end)
 	end
 
 	layoutTabs = function(st, animate)
@@ -731,7 +735,6 @@ function Pingo.CreateWindow(title, version, config)
 			if scale then tw(scale, 0.42, {Scale = 1}, BACK) end
 		end)
 	end
-
 	local function performSearch(q)
 		q = string.lower(q):gsub("^%s+", ""):gsub("%s+$", "")
 		win.SearchText = q
@@ -755,6 +758,7 @@ function Pingo.CreateWindow(title, version, config)
 			elseif rec.Outer.Parent == SearchPage then rec.Outer.Parent = homePage(rec) end
 		end
 	end
+
 	SearchBox:GetPropertyChangedSignal("Text"):Connect(function() performSearch(SearchBox.Text) end)
 
 	local function newCard(name)
@@ -770,6 +774,7 @@ function Pingo.CreateWindow(title, version, config)
 		return body
 	end
 
+	-- Reveal cards as they enter the viewport while the user scrolls.
 	local revealedItems = setmetatable({}, {__mode = "k"})
 	local function revealVisible(page)
 		if win.ReduceMotion or not page.Visible then return end
@@ -792,7 +797,6 @@ function Pingo.CreateWindow(title, version, config)
 			end
 		end
 	end
-
 	local function watchScroll(page)
 		page:GetPropertyChangedSignal("CanvasPosition"):Connect(function() revealVisible(page) end)
 		page:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() task.defer(function() revealVisible(page) end) end)
@@ -874,7 +878,7 @@ function Pingo.CreateWindow(title, version, config)
 		return rec
 	end
 
-	local menuOpen, closeMenu, openMenu
+	local menuOpen
 	closeMenu = function()
 		local m = menuOpen
 		if not m then return end
@@ -988,7 +992,7 @@ function Pingo.CreateWindow(title, version, config)
 				sc.Scale = 0.6
 				tw(sc, 0.45, {Scale = 1}, BACK)
 			end
-			recountHidden(st)
+			recountHidden(st, (not v) and nil or nil)
 		end
 		if instant or not sc then
 			move()
@@ -1227,6 +1231,10 @@ function Pingo.CreateWindow(title, version, config)
 				root:Destroy()
 			end
 		end
+		fl.Export = function()
+			local p = root.Position
+			return {pos = {p.X.Scale, p.X.Offset, p.Y.Scale, p.Y.Offset}, locked = fl.Locked, size = fl.SizeIdx}
+		end
 		rec.Float = fl
 		if rec.Id then win.Floats[rec.Id] = fl end
 		tw(fl.Scale, 0.5, {Scale = FLOAT_SCALES[fl.SizeIdx]}, BACK)
@@ -1242,8 +1250,14 @@ function Pingo.CreateWindow(title, version, config)
 		tab.Star = new("ImageLabel", {Name = "Star", Image = icon(ICON.Star), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(13, 13), BackgroundTransparency = 1, Visible = false, ZIndex = 3, Parent = btn})
 		bind(tab.Star, "ImageColor3", "Accent")
 		local group = new("CanvasGroup", {Name = st.Name .. "_" .. name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, GroupTransparency = 1, Visible = false, Parent = PagesHolder})
+		
+		local layout
+		if opts.Layout == "grid" then
+			layout = new("UIGridLayout", {CellSize = opts.CellSize or UDim2.new(0.5, -8, 0, CELL_H), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder})
+		else
+			layout = new("UIListLayout", {Padding = UDim.new(0, GAP), SortOrder = Enum.SortOrder.LayoutOrder})
+		end
 
-		local layout = new("UIListLayout", {Padding = UDim.new(0, GAP), SortOrder = Enum.SortOrder.LayoutOrder})
 		local page = new("ScrollingFrame", {Name = "Page", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Parent = group}, {
 			new("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 12)}),
 			layout,
@@ -1275,22 +1289,63 @@ function Pingo.CreateWindow(title, version, config)
 		end
 		if win.ActiveSideTab == st and not st.ActiveTab then selectTab(tab) end
 
+		-- ==========================================================
+		-- ADD SECTION (مع تباعد من الأعلى والأسفل مثل الصورة)
+		-- ==========================================================
 		function tab:AddSection(name, description)
-			win.Counter = win.Counter + 1
-			local outer = new("CanvasGroup", {Name = "Section_" .. tostring(name), Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = win.Counter, Parent = tab.Page})
-			mkText("TextLabel", {Text = tostring(name), Font = Enum.Font.GothamBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), BackgroundTransparency = 1, Parent = outer}, "Accent")
-			local rec = {Name = tostring(name), Kind = "section", Tab = tab, Body = outer, Outer = outer, BaseOrder = outer.LayoutOrder}
-			rec.Search = string.lower(rec.Name)
-			table.insert(win.Elements, rec)
-			if not tab.System then
-				rec.Id = makeId(tab, rec.Name)
-				win.Registry[rec.Id] = rec
-				table.insert(tab.Recs, rec)
-			end
-			local api = {}
-			function api:SetText(t) rec.Outer:FindFirstChildOfClass("TextLabel").Text = tostring(t) end
-			function api:SetVisible(v) outer.Visible = v == true end
-			return api
+    win.Counter = win.Counter + 1
+
+    local outer = new("CanvasGroup", {
+        Name = "Section_" .. tostring(name),
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = win.Counter,
+        Parent = tab.Page
+    })
+
+    local lbl = mkText("TextLabel", {
+        Text = tostring(name),
+        Font = Enum.Font.GothamBold,
+        TextSize = 17,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Position = UDim2.fromOffset(10, 0),
+        Size = UDim2.new(1, -20, 1, 0),
+        BackgroundTransparency = 1,
+        Parent = outer
+    }, "Text")
+
+    local rec = {
+        Name = tostring(name),
+        Kind = "section",
+        Tab = tab,
+        Body = outer,
+        Outer = outer,
+        BaseOrder = outer.LayoutOrder
+    }
+
+    rec.Search = string.lower(rec.Name)
+
+    table.insert(win.Elements, rec)
+
+    if not tab.System then
+        rec.Id = makeId(tab, rec.Name)
+        win.Registry[rec.Id] = rec
+        table.insert(tab.Recs, rec)
+    end
+
+    local api = {}
+
+    function api:SetText(t)
+        lbl.Text = tostring(t)
+    end
+
+    function api:SetVisible(v)
+        outer.Visible = v == true
+    end
+
+    return api
 		end
 
 		function tab:AddButton(a, callback, extra)
@@ -1462,6 +1517,206 @@ function Pingo.CreateWindow(title, version, config)
 			return obj
 		end
 
+		function tab:AddTextbox(a, placeholder, callback, default, extra)
+			local o = type(a) == "table" and a or merge({Name = a, Placeholder = placeholder, Callback = callback, Default = default}, extra)
+			local default0 = o.Default or ""
+			local body = newCard(o.Name)
+			header(body, o, 0.44, 16)
+			local zone = holdZone(body, UDim2.new(0.5, 0, 1, 0))
+			local box = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.42, 0, 0, 30), ClipsDescendants = true, BorderSizePixel = 0, Parent = body}, {corner(6)})
+			bind(box, "BackgroundColor3", "Sidebar")
+			local bs = new("UIStroke", {Thickness = 1, Parent = box})
+			bind(bs, "Color", "Stroke")
+			local input = mkText("TextBox", {Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0), Text = default0, PlaceholderText = o.Placeholder or "Type...", Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ClearTextOnFocus = false, Parent = box})
+			bind(input, "PlaceholderColor3", "SubText")
+			hover(body, body)
+			input.Focused:Connect(function()
+				bind(bs, "Color", "Accent", true)
+				tw(bs, 0.2, {Thickness = 2})
+			end)
+			input.FocusLost:Connect(function(enter)
+				bind(bs, "Color", "Stroke", true)
+				tw(bs, 0.2, {Thickness = 1})
+				if o.Callback then task.spawn(o.Callback, input.Text, enter) end
+			end)
+			local obj = {Card = body}
+			function obj:Set(text, fire)
+				input.Text = tostring(text)
+				if fire and o.Callback then task.spawn(o.Callback, input.Text, false) end
+			end
+			function obj:Get() return input.Text end
+			function obj:Reset() obj:Set(default0, true) end
+			finish(tab, body, o, "textbox", obj, {zone})
+			return obj
+		end
+
+		function tab:AddLabel(a, value, shimmer, extra)
+			local o = type(a) == "table" and a or merge({Name = a, Value = value, Shimmer = shimmer}, extra)
+			local body = newCard(o.Name)
+			header(body, o, 0.45, 8)
+			local v = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0.45, -14, 0, 22), Text = tostring(o.Value or ""), Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = body}, o.Shimmer and "White" or "SubText")
+			if o.Shimmer then
+				local g = grad({"Accent", "Accent2", "Accent"}, v, {Offset = Vector2.new(-0.6, 0)})
+				TweenService:Create(g, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.6, 0)}):Play()
+			end
+			local zone = holdZone(body, UDim2.fromScale(1, 1))
+			hover(body, zone)
+			local obj = {Card = body}
+			function obj:Set(t) v.Text = tostring(t) end
+			finish(tab, body, o, "label", obj, {zone})
+			return obj
+		end
+
+		function tab:AddStepper(a, mn, mx, default, step, callback, extra)
+			local o = type(a) == "table" and a or merge({Name = a, Min = mn, Max = mx, Default = default, Step = step, Callback = callback}, extra)
+			local min, max = o.Min or 0, o.Max or 100
+			local amount = o.Amount or 10
+			local fmt = o.Format or function(v) return tostring(v) end
+			local default0 = math.clamp(o.Default or min, min, max)
+			local value = default0
+			local body = newCard(o.Name)
+			header(body, o, 0, 116)
+			local zone = holdZone(body, UDim2.new(1, -120, 1, 0))
+			local valBase = UDim2.new(1, -60, 0.5, 0)
+			local valLbl = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = valBase, Size = UDim2.fromOffset(40, 24), Text = fmt(value), Font = Enum.Font.GothamBold, TextSize = 13, Parent = body}, "Text")
+			local valScale = new("UIScale", {Parent = valLbl})
+			
+			local function apply(v, fire, dir)
+				v = math.clamp(v, min, max)
+				if v == value then
+					if fire then
+						valLbl.Position = UDim2.new(1, -60 + (dir or 1) * 5, 0.5, 0)
+						tw(valLbl, 0.15, {Position = valBase}, BACK)
+					end
+					return false
+				end
+				value = v
+				valLbl.Text = fmt(v)
+				valLbl.Position = UDim2.new(1, -60, 0.5, (dir or 0) * 4)
+				valLbl.TextTransparency = 0.4
+				valScale.Scale = 1.08
+				tw(valLbl, 0.12, {Position = valBase, TextTransparency = 0}, Q)
+				tw(valScale, 0.15, {Scale = 1}, BACK)
+				if fire and o.Callback then task.spawn(o.Callback, v) end
+				return true
+			end
+
+			local function mkBtn(img, xoff, dir, glyph)
+				local b = new("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, xoff, 0.5, 0), Size = UDim2.fromOffset(26, 26), Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 4, Parent = body}, {corner(8)})
+				bind(b, "BackgroundColor3", "Sidebar")
+				local s = new("UIScale", {Parent = b})
+				local im
+				if img then
+					im = new("ImageLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -8, 1, -8), BackgroundTransparency = 1, Image = icon(img), ZIndex = 5, Parent = b})
+					bind(im, "ImageColor3", "Text")
+				else
+					im = mkText("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(1, 1), Text = glyph, Font = Enum.Font.GothamBold, TextSize = 18, ZIndex = 5, Parent = b}, "Text")
+				end
+				b.MouseButton1Down:Connect(function()
+					tw(s, 0.05, {Scale = 0.85})
+					tw(b, 0.05, {BackgroundColor3 = T("AccentDark")})
+					tw(im, 0.05, {Rotation = dir * 10})
+					apply(value + (dir * amount), true, dir)
+					task.delay(0.08, function()
+						tw(s, 0.15, {Scale = 1}, BACK)
+						tw(b, 0.15, {BackgroundColor3 = T("Sidebar")})
+						tw(im, 0.15, {Rotation = 0}, BACK)
+					end)
+				end)
+				return b
+			end
+
+			mkBtn(o.MinusIcon or ICON.Minus, -84, -1, "−")
+			mkBtn(o.PlusIcon or ICON.Plus, -10, 1, "+")
+			hover(body, body)
+			local obj = {Card = body}
+			function obj:Set(v) apply(v, true, 0) end
+			function obj:Get() return value end
+			function obj:Reset() apply(default0, true, 0) end
+			finish(tab, body, o, "stepper", obj, {zone})
+			return obj
+		end
+
+		function tab:AddDropdown(a, options, default, callback, extra)
+			local o = type(a) == "table" and a or merge({Name = a, Options = options, Default = default, Callback = callback}, extra)
+			local dd = {Name = tostring(o.Name), Options = o.Options or {}, Max = (o.Max == nil) and 1 or o.Max, Placeholder = o.Placeholder or "Select...", Selected = {}, Swatches = o.Swatches, Callback = o.Callback}
+			if dd.Max <= 0 then dd.Max = math.huge end
+			local function loadDefault(def)
+				dd.Selected = {}
+				if type(def) == "string" then
+					dd.Selected = {def}
+				elseif type(def) == "table" then
+					for _, v in ipairs(def) do
+						if #dd.Selected < dd.Max then table.insert(dd.Selected, v) end
+					end
+				end
+			end
+			loadDefault(o.Default)
+			local default0 = {}
+			for _, v in ipairs(dd.Selected) do table.insert(default0, v) end
+			local body = newCard(o.Name)
+			header(body, o, 0.46, 12)
+			local box = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0.44, 0, 0, 32), BorderSizePixel = 0, Parent = body}, {corner(8)})
+			bind(box, "BackgroundColor3", "Sidebar")
+			local bst = new("UIStroke", {Thickness = 1, Parent = box})
+			bind(bst, "Color", "Stroke")
+			local valLbl = mkText("TextLabel", {Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -30, 1, 0), Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = box}, "Text")
+			local chev = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(16, 16), Text = "›", Font = Enum.Font.GothamBold, TextSize = 20, Rotation = 90, Parent = box}, "SubText")
+			dd.Chev = chev
+			function dd.Refresh()
+				local n = #dd.Selected
+				if n == 0 then
+					valLbl.Text = dd.Placeholder
+					bind(valLbl, "TextColor3", "SubText")
+				else
+					bind(valLbl, "TextColor3", "Text")
+					if n == 1 then valLbl.Text = tostring(dd.Selected[1]) else valLbl.Text = n .. " selected" end
+				end
+			end
+			dd.Refresh()
+			local hit = hitButton(body)
+			hover(body, hit)
+			pressFx(body, hit)
+			hit.MouseButton1Click:Connect(function()
+				if hold.consumed then return end
+				openDropdownPanel(dd)
+			end)
+			local obj = {Card = body, Listeners = {}}
+			local function fireCb()
+				if dd.Callback then
+					if dd.Max == 1 then task.spawn(dd.Callback, dd.Selected[1])
+					else
+						local copy = {}
+						for _, v in ipairs(dd.Selected) do table.insert(copy, v) end
+						task.spawn(dd.Callback, copy)
+					end
+				end
+				for _, f in ipairs(obj.Listeners) do pcall(f) end
+			end
+			dd.Fire = fireCb
+			function obj:Set(v, fire)
+				loadDefault(v)
+				dd.Refresh()
+				if fire then fireCb() end
+			end
+			function obj:Get()
+				if dd.Max == 1 then return dd.Selected[1] end
+				local copy = {}
+				for _, v in ipairs(dd.Selected) do table.insert(copy, v) end
+				return copy
+			end
+			function obj:GetList()
+				local copy = {}
+				for _, v in ipairs(dd.Selected) do table.insert(copy, v) end
+				return copy
+			end
+			function obj:SetOptions(list) dd.Options = list or {} end
+			function obj:Reset() obj:Set(default0, true) end
+			dd.Obj = obj
+			finish(tab, body, o, "dropdown", obj, {hit})
+			return obj
+		end
+
 		return tab
 	end
 
@@ -1471,6 +1726,7 @@ function Pingo.CreateWindow(title, version, config)
 		topCount = topCount + 1
 		st.Y = 2 + (topCount - 1) * 42
 		st.Order = topCount
+
 		local btn = new("TextButton", {Name = name, Position = UDim2.fromOffset(10, st.Y), Size = UDim2.new(1, -20, 0, 38), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2, Parent = Nav})
 		st.Button = btn
 		local pad = 14
@@ -1514,6 +1770,7 @@ function Pingo.CreateWindow(title, version, config)
 
 	function win:SetLocked(state)
 		win.Locked = state == true
+		if win.LockToggle and win.LockToggle:Get() ~= win.Locked then win.LockToggle:Set(win.Locked) end
 	end
 
 	local btnText = tostring(config.ButtonText or title)
@@ -1533,7 +1790,6 @@ function Pingo.CreateWindow(title, version, config)
 		NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1),
 	}), Parent = sweep})
 	TweenService:Create(sg, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 3), {Offset = Vector2.new(1, 0)}):Play()
-
 	local iconBox = new("Frame", {Position = UDim2.fromOffset(7, 7), Size = UDim2.fromOffset(32, 32), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 13, Parent = OpenBtn}, {corner(9)})
 	local iconPop = new("UIScale", {Parent = iconBox})
 	if config.Icon then
@@ -1541,7 +1797,7 @@ function Pingo.CreateWindow(title, version, config)
 	else
 		new("TextLabel", {Text = string.upper(string.sub(btnText, 1, 1)), Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 14, Parent = iconBox})
 	end
-
+	
 	new("TextLabel", {Text = btnText, Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, BackgroundTransparency = 1, Position = UDim2.fromOffset(49, 0), Size = UDim2.new(1, -49, 1, 0), ZIndex = 13, Parent = OpenBtn})
 	OpenBtn.MouseEnter:Connect(function() tw(obScale, 0.25, {Scale = 1.06}, BACK); tw(obStroke, 0.2, {Transparency = 0}) end)
 	OpenBtn.MouseLeave:Connect(function() tw(obScale, 0.25, {Scale = 1}, BACK); tw(obStroke, 0.2, {Transparency = 0.15}) end)
@@ -1551,6 +1807,30 @@ function Pingo.CreateWindow(title, version, config)
 		win:Toggle()
 	end)
 	win.OpenButton = OpenBtn
+
+	local hideSpec = {Text = config.HideText or "Hide Menu", Icon = config.HideIcon, Style = "Default"}
+	local unloadSpec = {Text = config.UnloadText or "Unload Menu", Icon = config.UnloadIcon, Style = "Primary"}
+	local function pillW(spec)
+		return math.ceil(TextService:GetTextSize(spec.Text, 13, Enum.Font.GothamBold, Vector2.new(300, 34)).X + 36 + (spec.Icon and 22 or 0))
+	end
+	local hw, uw, BAR_GAP = pillW(hideSpec), pillW(unloadSpec), 10
+	local Bar = new("Frame", {Name = "BottomBar", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 12), Size = UDim2.fromOffset(hw + BAR_GAP + uw, 34), BackgroundTransparency = 1, Parent = Holder})
+	local barScale = new("UIScale", {Parent = Bar})
+	local hideBtn = pill(Bar, hideSpec, {Size = UDim2.fromOffset(hw, 34), Radius = 9, TextSize = 13})
+	local glow = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, hw + BAR_GAP + uw / 2, 0.5, 0), Size = UDim2.fromOffset(uw + 14, 48), BackgroundTransparency = 0.82, BorderSizePixel = 0, Parent = Bar}, {corner(15)})
+	bind(glow, "BackgroundColor3", "Accent")
+	TweenService:Create(glow, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {BackgroundTransparency = 0.64}):Play()
+	local unloadBtn = pill(Bar, unloadSpec, {Size = UDim2.fromOffset(uw, 34), Position = UDim2.fromOffset(hw + BAR_GAP, 0), Radius = 9, TextSize = 13})
+	hideBtn.MouseButton1Click:Connect(function() win:Toggle(false) end)
+	unloadBtn.MouseButton1Click:Connect(function()
+		if config.ConfirmUnload == false then win:Unload() return end
+		win:Popup({
+			Title = "Unload " .. title .. "?",
+			Text = "This removes the menu completely and stops its features until you run the script again.",
+			Icon = config.UnloadIcon or config.Icon,
+			Buttons = {{Text = "Cancel"}, {Text = "Unload", Style = "Primary", Callback = function() win:Unload() end}},
+		})
+	end)
 
 	local token = 0
 	function win:Toggle(state)
@@ -1571,6 +1851,12 @@ function Pingo.CreateWindow(title, version, config)
 			tw(Main, 0.3, {GroupTransparency = 0})
 			Main.Position = UDim2.new(0.5, 0, 0.5, 24)
 			tw(Main, 0.6, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
+			Bar.Position = UDim2.new(0.5, 0, 1, -8)
+			barScale.Scale = 0.85
+			task.delay(0.12, function()
+				tw(Bar, 0.55, {Position = UDim2.new(0.5, 0, 1, 12)}, Q)
+				tw(barScale, 0.5, {Scale = 1}, BACK)
+			end)
 			tw(Sidebar, 0.6, {Position = UDim2.fromOffset(0, 0)}, Q)
 			tw(Content, 0.6, {Position = UDim2.fromOffset(170, 0)}, Q)
 			local t = win.CurrentTab
@@ -1591,22 +1877,384 @@ function Pingo.CreateWindow(title, version, config)
 		if input.KeyCode == (config.Key or Enum.KeyCode.RightShift) then win:Toggle() end
 	end)
 
-	function win:Notify(nTitle, text, duration)
-		print("[" .. nTitle .. "]: " .. text)
+	local NW = 304
+	local NotifHolder = new("Frame", {Name = "Notifications", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.new(0, NW, 1, -32), BackgroundTransparency = 1, ZIndex = 20, Parent = gui}, {
+		new("UIListLayout", {Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder}),
+	})
+
+	local notifCount, notifList = 0, {}
+	function win:Notify(nTitle, text, duration, extra)
+		local o = {}
+		if type(nTitle) == "table" then
+			o = nTitle
+			nTitle, text, duration = o.Title, o.Text, o.Duration
+		elseif type(extra) == "table" then
+			o = extra
+		elseif extra ~= nil then
+			o = {Icon = extra}
+		end
+		if not win.NotifyEnabled and not o.Force then return {Dismiss = function() end} end
+		local buttons = o.Buttons or {}
+		local nb = #buttons
+		if duration == nil then duration = (nb > 0) and 8 or 4 end
+		notifCount = notifCount + 1
+		nTitle, text = tostring(nTitle or ""), tostring(text or "")
+		local tx = 64
+		local textW2 = NW - tx - 14
+		local th = 0
+		if text ~= "" then
+			th = TextService:GetTextSize(text, 12, Enum.Font.Gotham, Vector2.new(textW2, 600)).Y
+		end
+		local contentBottom = math.max(52, 34 + th)
+		local BH, BG = 28, 6
+		local cols = math.min(math.max(nb, 1), 3)
+		local rows = nb > 0 and math.ceil(nb / cols) or 0
+		local btnH = rows > 0 and (rows * BH + (rows - 1) * BG) or 0
+		local h = contentBottom + 14
+		if nb > 0 then h = contentBottom + 10 + btnH + 14 end
+		local wrap = new("Frame", {Size = UDim2.fromOffset(NW, 0), BackgroundTransparency = 1, LayoutOrder = notifCount, Parent = NotifHolder})
+		local n = new("CanvasGroup", {Size = UDim2.fromOffset(NW, h), Position = UDim2.fromOffset(NW + 40, 0), BorderSizePixel = 0, BackgroundTransparency = 0, GroupTransparency = 1, Parent = wrap}, {corner(12)})
+		bind(n, "BackgroundColor3", "Sidebar")
+		local ns = new("UIStroke", {Thickness = 1, Parent = n})
+		bind(ns, "Color", "Stroke")
+		local tint = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = n})
+		local tintG = grad({"Accent", "Accent2"}, tint)
+		tintG.Transparency = NumberSequence.new(0.88, 0.97)
+		local accentBar = new("Frame", {Size = UDim2.new(0, 3, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = n})
+		grad({"Accent", "Accent2"}, accentBar, {Rotation = 90})
+		local badge = new("Frame", {Position = UDim2.fromOffset(14, 14), Size = UDim2.fromOffset(38, 38), BorderSizePixel = 0, BackgroundTransparency = 0.82, Parent = n}, {corner(10)})
+		bind(badge, "BackgroundColor3", "Accent")
+		local bst = new("UIStroke", {Thickness = 1.5, Transparency = 0.55, Parent = badge})
+		bind(bst, "Color", "Accent")
+		local dot
+		if o.Icon then
+			local im = new("ImageLabel", {Image = icon(o.Icon), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -8, 1, -8), BackgroundTransparency = 1, Parent = badge}, {corner(7)})
+			if o.Tint then bind(im, "ImageColor3", "Accent") end
+		else
+			dot = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(0, 0), BorderSizePixel = 0, Parent = badge}, {corner(8)})
+			bind(dot, "BackgroundColor3", "Accent")
+		end
+		mkText("TextLabel", {Text = nTitle, Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(tx, 13), Size = UDim2.new(1, -(tx + 14), 0, 18), Parent = n})
+		if text ~= "" then
+			mkText("TextLabel", {Text = text, Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Position = UDim2.fromOffset(tx, 34), Size = UDim2.fromOffset(textW2, th), Parent = n}, "SubText")
+		end
+		local fill
+		if duration > 0 then
+			local track = new("Frame", {Position = UDim2.new(0, 0, 1, -3), Size = UDim2.new(1, 0, 0, 3), BorderSizePixel = 0, BackgroundTransparency = 0.5, Parent = n})
+			bind(track, "BackgroundColor3", "Off")
+			fill = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = track})
+			grad({"Accent", "Accent2"}, fill)
+		end
+		local clickArea = new("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = n})
+		local dead = false
+		local dismiss
+		dismiss = function()
+			if dead then return end
+			dead = true
+			for i, v in ipairs(notifList) do
+				if v == dismiss then table.remove(notifList, i) break end
+			end
+			tw(n, 0.4, {Position = UDim2.fromOffset(NW + 40, 0)}, Q, IN)
+			tw(n, 0.3, {GroupTransparency = 1}, QUAD, IN)
+			task.delay(0.3, function()
+				if wrap.Parent then tw(wrap, 0.28, {Size = UDim2.fromOffset(NW, 0)}, Q) end
+			end)
+			task.delay(0.62, function()
+				unbindTree(wrap)
+				wrap:Destroy()
+			end)
+		end
+		clickArea.MouseButton1Click:Connect(dismiss)
+		if nb > 0 then
+			local grid = new("Frame", {Position = UDim2.fromOffset(14, contentBottom + 10), Size = UDim2.new(1, -28, 0, btnH), BackgroundTransparency = 1, Parent = n}, {
+				new("UIGridLayout", {CellSize = UDim2.new(1 / cols, -(BG * (cols - 1)) / cols, 0, BH), CellPadding = UDim2.fromOffset(BG, BG), SortOrder = Enum.SortOrder.LayoutOrder}),
+			})
+			for i, spec in ipairs(buttons) do
+				local sp = {Text = spec.Text, Icon = spec.Icon, Style = spec.Style or ((nb == 1) and "Primary" or "Default")}
+				local pb = pill(grid, sp, {Radius = 8, TextSize = 12})
+				pb.LayoutOrder = i
+				pb.MouseButton1Click:Connect(function()
+					if spec.Callback then task.spawn(spec.Callback) end
+					if spec.Keep ~= true then dismiss() end
+				end)
+			end
+		end
+		tw(wrap, 0.35, {Size = UDim2.fromOffset(NW, h + 8)}, Q)
+		tw(n, 0.6, {Position = UDim2.fromOffset(0, 0)}, Q)
+		tw(n, 0.35, {GroupTransparency = 0})
+		if dot then task.delay(0.25, function() if dot.Parent then tw(dot, 0.45, {Size = UDim2.fromOffset(12, 12)}, BACK) end end) end
+		if fill then tw(fill, duration, {Size = UDim2.new(0, 0, 1, 0)}, Enum.EasingStyle.Linear) end
+		if duration > 0 then task.delay(duration, dismiss) end
+		table.insert(notifList, dismiss)
+		if #notifList > 5 then notifList[1]() end
+		return {Dismiss = dismiss}
 	end
 
+	local activePopup
+	function win:Popup(o)
+		o = o or {}
+		if activePopup then activePopup.Close(true) end
+		local buttons = o.Buttons
+		if not buttons or #buttons == 0 then buttons = {{Text = "OK", Style = "Primary"}} end
+		local PW = 336
+		local inner = PW - 36
+		local hasIcon = o.Icon ~= nil
+		local text = tostring(o.Text or "")
+		local th = 0
+		if text ~= "" then th = TextService:GetTextSize(text, 13, Enum.Font.Gotham, Vector2.new(inner, 600)).Y end
+		local textY = hasIcon and 74 or 48
+		local nextY = (text ~= "") and (textY + th + 16) or textY
+		local inputY
+		if o.Input then
+			inputY = nextY
+			nextY = nextY + 36 + 14
+		else
+			nextY = nextY + 2
+		end
+		local btnY = nextY
+		local nb = #buttons
+		local cols = nb <= 3 and nb or 2
+		local rows = math.ceil(nb / cols)
+		local BH, BG = 36, 8
+		local btnH = rows * BH + (rows - 1) * BG
+		local PH = btnY + btnH + 18
+		local overlay = new("TextButton", {Name = "PopupOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 60, Parent = Main})
+		local dlg = new("CanvasGroup", {Active = true, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 24), Size = UDim2.fromOffset(PW, PH), BackgroundTransparency = 0, BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 61, Parent = overlay}, {corner(14)})
+		bind(dlg, "BackgroundColor3", "Sidebar")
+		local dscale = new("UIScale", {Scale = 0.92, Parent = dlg})
+		local dst = new("UIStroke", {Thickness = 1.5, Transparency = 0.35, Parent = dlg})
+		bind(dst, "Color", "Accent")
+		local topBar = new("Frame", {Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = dlg})
+		grad({"Accent", "Accent2"}, topBar)
+		local titleX = 18
+		if hasIcon then
+			titleX = 72
+			local badge = new("Frame", {Position = UDim2.fromOffset(18, 20), Size = UDim2.fromOffset(44, 44), BorderSizePixel = 0, BackgroundTransparency = 0.82, Parent = dlg}, {corner(12)})
+			bind(badge, "BackgroundColor3", "Accent")
+			local bst = new("UIStroke", {Thickness = 1.5, Transparency = 0.55, Parent = badge})
+			bind(bst, "Color", "Accent")
+			local im = new("ImageLabel", {Image = icon(o.Icon), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -8, 1, -8), BackgroundTransparency = 1, Parent = badge}, {corner(8)})
+			if o.Tint then bind(im, "ImageColor3", "Accent") end
+		end
+		mkText("TextLabel", {Text = tostring(o.Title or ""), Font = Enum.Font.GothamBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(titleX, hasIcon and 20 or 16), Size = UDim2.new(1, -(titleX + 18), 0, hasIcon and 44 or 24), Parent = dlg})
+		if text ~= "" then
+			mkText("TextLabel", {Text = text, Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, Position = UDim2.fromOffset(18, textY), Size = UDim2.fromOffset(inner, th), Parent = dlg}, "SubText")
+		end
+		local inputBox
+		if o.Input then
+			local ib = new("Frame", {Position = UDim2.fromOffset(18, inputY), Size = UDim2.fromOffset(inner, 36), BorderSizePixel = 0, Parent = dlg}, {corner(9)})
+			bind(ib, "BackgroundColor3", "Card")
+			local ibs = new("UIStroke", {Thickness = 1, Parent = ib})
+			bind(ibs, "Color", "Stroke")
+			inputBox = mkText("TextBox", {Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -24, 1, 0), Text = tostring(o.Input.Default or ""), PlaceholderText = tostring(o.Input.Placeholder or "Type here..."), Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = ib}, "Text")
+			bind(inputBox, "PlaceholderColor3", "SubText")
+			inputBox.Focused:Connect(function() bind(ibs, "Color", "Accent", true) end)
+			inputBox.FocusLost:Connect(function() bind(ibs, "Color", "Stroke", true) end)
+		end
+		local handle = {}
+		local closed = false
+		local function close(instant)
+			if closed then return end
+			closed = true
+			if activePopup == handle then activePopup = nil end
+			if instant then unbindTree(overlay); overlay:Destroy() return end
+			tw(overlay, 0.22, {BackgroundTransparency = 1})
+			tw(dlg, 0.2, {GroupTransparency = 1, Position = UDim2.new(0.5, 0, 0.5, 12)}, QUAD, IN)
+			tw(dscale, 0.2, {Scale = 0.94}, QUAD, IN)
+			task.delay(0.26, function() unbindTree(overlay); overlay:Destroy() end)
+		end
+		handle.Close = close
+		activePopup = handle
+		local grid = new("Frame", {Position = UDim2.fromOffset(18, btnY), Size = UDim2.fromOffset(inner, btnH), BackgroundTransparency = 1, Parent = dlg}, {
+			new("UIGridLayout", {CellSize = UDim2.new(1 / cols, -(BG * (cols - 1)) / cols, 0, BH), CellPadding = UDim2.fromOffset(BG, BG), SortOrder = Enum.SortOrder.LayoutOrder}),
+		})
+		for i, spec in ipairs(buttons) do
+			local pb = pill(grid, spec, {Radius = 9, TextSize = 13})
+			pb.LayoutOrder = i
+			pb.MouseButton1Click:Connect(function()
+				local txt = inputBox and inputBox.Text or nil
+				if spec.RequireInput then
+					local t = txt or ""
+					t = t:gsub("%s", "")
+					if t == "" then
+						dlg.Position = UDim2.new(0.5, 8, 0.5, 0)
+						tw(dlg, 0.35, {Position = UDim2.fromScale(0.5, 0.5)}, BACK)
+						return
+					end
+				end
+				if spec.Callback then task.spawn(spec.Callback, txt) end
+				if spec.Keep ~= true then close() end
+			end)
+		end
+		if o.Dismissable ~= false then overlay.MouseButton1Click:Connect(function() close() end) end
+		tw(overlay, 0.25, {BackgroundTransparency = 0.45})
+		tw(dlg, 0.5, {Position = UDim2.fromScale(0.5, 0.5)}, Q)
+		tw(dlg, 0.3, {GroupTransparency = 0})
+		tw(dscale, 0.5, {Scale = 1}, BACK)
+		if inputBox then task.delay(0.35, function() if inputBox.Parent then inputBox:CaptureFocus() end end) end
+		return handle
+	end
+
+	local activeDD
+	openDropdownPanel = function(dd)
+		if activeDD then activeDD.close(true) end
+		local PWIDTH = 246
+		local multi = dd.Max ~= 1
+		local footerH = multi and 54 or 12
+		local overlay = new("TextButton", {Name = "DropdownOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 55, Parent = Main})
+		local panel = new("CanvasGroup", {Active = true, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, PWIDTH + 30, 0.5, 0), Size = UDim2.new(0, PWIDTH, 1, -24), BackgroundTransparency = 0, BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 56, Parent = overlay}, {corner(14)})
+		bind(panel, "BackgroundColor3", "Sidebar")
+		local ps = new("UIStroke", {Thickness = 1.5, Transparency = 0.3, Parent = panel})
+		bind(ps, "Color", "Accent")
+		local topBar = new("Frame", {Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = panel})
+		grad({"Accent", "Accent2"}, topBar)
+		mkText("TextLabel", {Text = dd.Name, Font = Enum.Font.GothamBold, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -86, 0, 22), Parent = panel})
+		local counter = mkText("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 14), Size = UDim2.fromOffset(60, 22), Text = "", Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Parent = panel}, "Accent")
+		local function updateCounter()
+			if multi then
+				counter.Text = (dd.Max == math.huge) and (#dd.Selected .. " selected") or (#dd.Selected .. "/" .. dd.Max)
+			end
+		end
+		updateCounter()
+		local sb = new("Frame", {Position = UDim2.fromOffset(14, 46), Size = UDim2.new(1, -28, 0, 34), BorderSizePixel = 0, Parent = panel}, {corner(9)})
+		bind(sb, "BackgroundColor3", "Card")
+		local sbs = new("UIStroke", {Thickness = 1, Parent = sb})
+		bind(sbs, "Color", "Stroke")
+		local si = new("ImageLabel", {Image = icon(ICON.Search), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1, Parent = sb})
+		bind(si, "ImageColor3", "SubText")
+		local search = mkText("TextBox", {Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -42, 1, 0), Text = "", PlaceholderText = "Search options...", Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = sb}, "Text")
+		bind(search, "PlaceholderColor3", "SubText")
+		search.Focused:Connect(function() bind(sbs, "Color", "Accent", true) end)
+		search.FocusLost:Connect(function() bind(sbs, "Color", "Stroke", true) end)
+		local list = new("ScrollingFrame", {Position = UDim2.fromOffset(8, 90), Size = UDim2.new(1, -16, 1, -(90 + footerH)), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = panel}, {
+			new("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}),
+			new("UIPadding", {PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 6)}),
+		})
+		bind(list, "ScrollBarImageColor3", "SubText")
+		local closed = false
+		local function close(instant)
+			if closed then return end
+			closed = true
+			if activeDD and activeDD.overlay == overlay then activeDD = nil end
+			if dd.Chev then tw(dd.Chev, 0.3, {Rotation = 90}, Q) end
+			if instant then unbindTree(overlay); overlay:Destroy() return end
+			tw(overlay, 0.25, {BackgroundTransparency = 1})
+			tw(panel, 0.35, {Position = UDim2.new(1, PWIDTH + 30, 0.5, 0)}, Q, IN)
+			tw(panel, 0.25, {GroupTransparency = 1})
+			task.delay(0.4, function() unbindTree(overlay); overlay:Destroy() end)
+		end
+		activeDD = {close = close, overlay = overlay}
+		overlay.MouseButton1Click:Connect(function() close() end)
+		local rowRefs = {}
+		local function refreshRows()
+			for _, r in ipairs(rowRefs) do
+				local sel = table.find(dd.Selected, r.opt) ~= nil
+				r.bar.Visible = sel
+				r.dot.Visible = sel
+				bind(r.lbl, "TextColor3", sel and "Accent" or "Text", true)
+			end
+			updateCounter()
+		end
+		local function pick(r)
+			local idx = table.find(dd.Selected, r.opt)
+			if not multi then
+				dd.Selected = {r.opt}
+				dd.Refresh()
+				dd.Fire()
+				refreshRows()
+				task.delay(0.12, function() close() end)
+				return
+			end
+			if idx then
+				table.remove(dd.Selected, idx)
+			else
+				if #dd.Selected >= dd.Max then
+					r.btn.Position = UDim2.fromOffset(8, 0)
+					tw(r.btn, 0.35, {Position = UDim2.fromOffset(0, 0)}, BACK)
+					win:Notify("Limit reached", "You can select up to " .. dd.Max .. " options.", 2.5)
+					return
+				end
+				table.insert(dd.Selected, r.opt)
+			end
+			dd.Refresh()
+			dd.Fire()
+			refreshRows()
+		end
+		local emptyLbl = mkText("TextLabel", {Text = "No results", Font = Enum.Font.Gotham, TextSize = 13, Size = UDim2.new(1, 0, 0, 40), Visible = false, LayoutOrder = 9999, Parent = list}, "SubText")
+		local function buildRows(filter)
+			for _, r in ipairs(rowRefs) do unbindTree(r.outer); r.outer:Destroy() end
+			rowRefs = {}
+			filter = string.lower(filter or "")
+			local count = 0
+			for i, opt in ipairs(dd.Options) do
+				if filter == "" or string.find(string.lower(tostring(opt)), filter, 1, true) then
+					count = count + 1
+					local outer = new("Frame", {Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, LayoutOrder = i, Parent = list})
+					local btn = new("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, BorderSizePixel = 0, Parent = outer}, {corner(9)})
+					local bar = new("Frame", {AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 3, 0.5, 0), Size = UDim2.fromOffset(3, 18), BorderSizePixel = 0, Visible = false, Parent = btn}, {corner(2)})
+					bind(bar, "BackgroundColor3", "Accent")
+					local tx = 16
+					local sw = dd.Swatches and dd.Swatches[opt]
+					if sw then
+						new("Frame", {AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.fromOffset(16, 16), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = btn}, {
+							corner(8),
+							new("UIGradient", {Rotation = 35, Color = ColorSequence.new(sw[1], sw[2])}),
+						})
+						tx = 42
+					end
+					local lbl = mkText("TextLabel", {Text = tostring(opt), Font = Enum.Font.GothamMedium, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Position = UDim2.fromOffset(tx, 0), Size = UDim2.new(1, -tx - 30, 1, 0), Parent = btn}, "Text")
+					local dot = new("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(8, 8), BorderSizePixel = 0, Visible = false, Parent = btn}, {corner(4)})
+					bind(dot, "BackgroundColor3", "Accent")
+					local r = {opt = opt, outer = outer, btn = btn, bar = bar, lbl = lbl, dot = dot}
+					table.insert(rowRefs, r)
+					btn.MouseEnter:Connect(function() tw(btn, 0.15, {BackgroundTransparency = 0.93}) end)
+					btn.MouseLeave:Connect(function() tw(btn, 0.2, {BackgroundTransparency = 1}) end)
+					btn.MouseButton1Click:Connect(function() pick(r) end)
+					if count <= 12 then
+						btn.Position = UDim2.fromOffset(26, 0)
+						task.delay(0.05 + count * 0.03, function()
+							if btn.Parent then tw(btn, 0.45, {Position = UDim2.fromOffset(0, 0)}, Q) end
+						end)
+					end
+				end
+			end
+			emptyLbl.Visible = count == 0
+			refreshRows()
+		end
+		buildRows("")
+		search:GetPropertyChangedSignal("Text"):Connect(function() buildRows(search.Text) end)
+		if multi then
+			local clear = pill(panel, {Text = "Clear"}, {Size = UDim2.new(0.4, -14, 0, 34), Position = UDim2.new(0, 14, 1, -46), Radius = 9, TextSize = 13})
+			local done = pill(panel, {Text = "Done", Style = "Primary"}, {Size = UDim2.new(0.6, -20, 0, 34), Position = UDim2.new(0.4, 6, 1, -46), Radius = 9, TextSize = 13})
+			clear.MouseButton1Click:Connect(function()
+				dd.Selected = {}
+				dd.Refresh()
+				dd.Fire()
+				refreshRows()
+			end)
+			done.MouseButton1Click:Connect(function() close() end)
+		end
+		if dd.Chev then tw(dd.Chev, 0.3, {Rotation = -90}, Q) end
+		tw(overlay, 0.3, {BackgroundTransparency = 0.5})
+		tw(panel, 0.55, {Position = UDim2.new(1, -12, 0.5, 0)}, Q)
+		tw(panel, 0.3, {GroupTransparency = 0})
+	end
+
+	function win:SetTheme(name) Pingo.SetTheme(name) end
+	local unloadHooks = {}
+	function win:OnUnload(fn) table.insert(unloadHooks, fn) end
 	function win:Destroy()
 		for _, c in ipairs(win.Conns) do pcall(function() c:Disconnect() end) end
 		themeListeners[win] = nil
 		unbindTree(gui)
 		gui:Destroy()
 	end
-
 	function win:Unload()
 		if win.Unloaded then return end
 		win.Unloaded = true
 		if win.Opened then win:Toggle(false) end
 		task.delay(0.4, function()
+			for _, fn in ipairs(unloadHooks) do pcall(fn) end
 			if config.OnUnload then pcall(config.OnUnload) end
 			win:Destroy()
 		end)
